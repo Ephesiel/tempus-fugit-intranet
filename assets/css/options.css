@@ -1,0 +1,19 @@
+.tfi-options-table th, .tfi-options-table td {
+    padding: 5px;
+}
+
+.tfi-option-warning {
+    color: #ee8727;
+}
+
+.tfi-options-table .change-field-row {
+    position: relative;    
+}
+
+.tfi-options-table .change-field-row .button {
+    position: absolute;
+    top: -25px;
+    left: -5px;
+    border: none;
+    font-size: 20px;
+}
