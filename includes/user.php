@@ -193,12 +193,13 @@ class User {
         }
 
         $field = $this->allowed_fields()[$field_slug];
-        $value;
+        $value = '';
         
         if ( array_key_exists( $field_slug, $this->user_db_datas() ) ) {
             $value = $this->user_db_datas()[$field_slug];
         }
-        else {
+        
+        if ( empty( $value ) ) {
             $value = $field->default_value;
         }
 
@@ -276,7 +277,7 @@ class User {
             }
         }
 
-        if ( ! empty( array_diff( $to_send, $witness ) ) ) {
+        if ( ! empty( array_diff_assoc( $to_send, $witness ) ) ) {
             global $wpdb;
             
             $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $to_send ) ), array( 'user_id' => $this->id ), null, '%d' );

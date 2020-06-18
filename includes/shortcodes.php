@@ -100,7 +100,7 @@ class ShortcodesManager {
      * It display the form with all fields concerning the actual user
      * 
      * Attributes :
-     *      -   previzualization => bool => if you want to have a previzualisation of all fields
+     *      -   preview => bool => if you want to have a previzualisation of all fields
      * 
      * @since 1.0.0
      * @access public

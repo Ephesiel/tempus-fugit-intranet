@@ -25,6 +25,7 @@ class AdminPanelManager {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'load_menu' ) );
         add_action( 'admin_init', array( $this, 'register_options' ) );
+        add_action( 'admin_init', array( $this, 'verify_options' ) );
         add_action( 'admin_footer', array( $this, 'load_assets' ) );
     }
 
@@ -204,6 +205,10 @@ class AdminPanelManager {
 			array( $this, 'display_users_section' ),
 			'users'
 		);
+	}
+
+	public function verify_options() {
+		//$fields = $this->$sanitize_fields( get_option( 'tfi_fields' ) );
 	}
 
     /**
@@ -584,6 +589,9 @@ class AdminPanelManager {
 		if ( isset( $datas['default'] ) ) {
 			$field['default'] = filter_var( $datas['default'], FILTER_SANITIZE_STRING );
 		}
+		if ( isset( $datas['special_type_params'] ) ) {
+			$field['default'] = filter_var( $datas['default'], FILTER_SANITIZE_STRING );
+		}
 		
 		// Reset the users array if it exists
 		$field['users'] = array();
@@ -712,7 +720,7 @@ class AdminPanelManager {
 			<?php foreach ( tfi_get_option( 'tfi_user_types' ) as $id => $name ): ?>
 			<li>
 				<input type="checkbox" id="tfi-user-type-<?php echo esc_attr( $id ); ?>" name="tfi_user_types[<?php echo esc_attr( $id ); ?>]" />
-				<label for="tfi-user-type-<?php echo esc_attr( $id ); ?>"><?php esc_html_e( $name ); ?></label>
+				<label for="tfi-user-type-<?php echo esc_attr( $id ); ?>"><?php esc_html_e( $name ); ?></label><p><i><?php printf( esc_html__( 'slug: %s' ), $id ); ?></i></p>
 			</li>
 			<?php endforeach; ?>
 		</ul>
@@ -732,6 +740,7 @@ class AdminPanelManager {
 					<th><?php esc_html_e( 'Slug' ); ?></th>
 					<th><?php esc_html_e( 'Name' ); ?></th>
 					<th><?php esc_html_e( 'Type' ); ?></th>
+					<th><?php esc_html_e( 'Parameters' ); ?></th>
 					<th><?php esc_html_e( 'Default value' ); ?></th>
 					<?php foreach ( $user_types as $id => $name ): ?>
 					<th><?php esc_html_e( $name ); ?></th>
@@ -748,10 +757,16 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][real_name]" value="<?php esc_attr_e( $datas['real_name'] ); ?>" /></td>
 					<td>
 						<select name="tfi_fields[<?php echo esc_attr( $id ); ?>][type]">
-							<?php foreach ( $field_types as $type_id => $name ): ?>
-							<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['type'] ? 'selected' : ''; ?>><?php esc_html_e( $name ); ?></option>
+							<?php foreach ( $field_types as $type_id => $param ): ?>
+							<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['type'] ? 'selected' : ''; ?>><?php esc_html_e( $param['display_name'] ); ?></option>
 							<?php endforeach; ?>
 						</select>	
+					</td>
+					<td class="param-fields" id="param-fields-<?php echo esc_attr( $id ); ?>">
+						<label><?php esc_html_e( 'Height:'); ?></label>
+						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_type_param][height]" value="<?php echo esc_attr( $datas['special_type_param']['height'] ); ?>" />
+						<label><?php esc_html_e( 'Width:'); ?></label>
+						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_type_param][width]" value="<?php echo esc_attr( $datas['special_type_param']['width'] ); ?>" />
 					</td>
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
@@ -777,8 +792,7 @@ class AdminPanelManager {
 							<option value="<?php echo esc_attr( $type_id ); ?>"><?php esc_html_e( $name ); ?></option>
 							<?php endforeach; ?>
 						</select>	
-					</dh>
-					<td><input type="text" name="tfi_fields[new_fields][number_to_replace][default]" value="" /></td>
+					</td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
 					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[new_fields][number_to_replace][users][<?php echo esc_attr( $type_id ); ?>]" /></td>
 					<?php endforeach; ?>
