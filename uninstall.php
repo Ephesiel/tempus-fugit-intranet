@@ -45,7 +45,10 @@ class UninstallManager {
      * @access private
      */
     private function delete_options() {
-        foreach ( tfi_get_options() as $option_name => $default_value) {
+        require_once TFI_PATH . 'includes/options.php';
+
+        $options_manager = new OptionsManager; 
+        foreach ( $options_manager->all_options_name() as $option_name ) {
             delete_option( $option_name );
         }
     }
@@ -79,7 +82,10 @@ class UninstallManager {
         $upload_dir = wp_upload_dir();
         
         if ( $upload_dir['error'] === false && ! empty( TFI_UPLOAD_FOLDER ) ) {
-            tfi_delete_files( $upload_dir['basedir'] . '/' . TFI_UPLOAD_FOLDER );
+            $target = $upload_dir['basedir'] . '/' . TFI_UPLOAD_FOLDER;
+            if ( file_exists( $target ) ) {
+                tfi_delete_files( $target );
+            }
         }
     }
 }

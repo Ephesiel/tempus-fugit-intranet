@@ -213,57 +213,22 @@ class AdminPanelManager {
 
     /**
 	 * Sanitize_shortcut.
-	 * 
-     * Sanitize each setting field as needed
-	 * The shortcut array should be like that :
-	 * {
-	 * 	  'ctrl_key_used' 	=> bool,
-	 * 	  'alt_key_used'	=> bool,
-	 * 	  'shift_key_used' 	=> bool,
-	 * 	  'key' 			=> int (65 <= 'key' <= 90)
-	 * }
      *
 	 * @since 1.0.0
+	 * @since 1.0.1		Refactoring methods with the OptionsManager class
 	 * @access public
      * @param array $input Contains shortcut set by the user
 	 * @return array $input sanitized
      */
     public function sanitize_shortcut( $input ) {
-		$new_input = array();
-		$option = tfi_get_option( 'tfi_shortcut' );
-		
-        if( isset( $input['ctrl_key_used'] ) ) {
-			$new_input['ctrl_key_used'] = rest_sanitize_boolean( $input['ctrl_key_used'] );
-		}
-		else {
-			$new_input['ctrl_key_used'] = $option['ctrl_key_used'];
-		}
-		
-		if( isset( $input['alt_key_used'] ) ) {
-			$new_input['alt_key_used'] = rest_sanitize_boolean( $input['alt_key_used'] );
-		}
-		else {
-			$new_input['alt_key_used'] = $option['alt_key_used'];
-		}
-	
-		if( isset( $input['shift_key_used'] ) ) {
-			$new_input['shift_key_used'] = rest_sanitize_boolean( $input['shift_key_used'] );
-		}
-		else {
-			$new_input['shift_key_used'] = $option['shift_key_used'];
+		if ( isset( $input['key'] ) ) {
+			$input['key'] = ord( strtoupper( sanitize_text_field( $input['key'] ) ) );
 		}
 
-        if( isset( $input['key'] ) ) {
-			$new_input['key'] = ord( strtoupper( sanitize_text_field( $input['key'] ) ) );
-			if ( $new_input['key'] < 65 || $new_input['key'] > 90 ) {
-				$new_input['key'] = $option['key'];
-			}
-		}
-		else {
-			$new_input['key'] = $option['key'];
-		}
+		require_once TFI_PATH . 'includes/options.php';
 
-        return $new_input;
+		$options_manager = new OptionsManager;
+		return $options_manager->sanitize_option( 'tfi_shortcut', $input );
 	}
 	
 	/**
@@ -278,18 +243,10 @@ class AdminPanelManager {
 	 * @return $input sanitized
 	 */
 	public function sanitize_user_page( $input ) {
-		$input = abs( $input );
-		$pages = get_pages( array(
-			'ID' => $input,
-			'meta_key' => '_wp_page_template',
-			'meta_value' => TFI_TEMPLATE_PAGE
-		) );
+		require_once TFI_PATH . 'includes/options.php';
 
-		if ( empty( $pages ) ) {
-			$input = tfi_get_option( 'tfi_user_page_id' ); 
-		}
-
-		return $input;
+		$options_manager = new OptionsManager;
+		return $options_manager->sanitize_option( 'tfi_user_page_id', $input );
 	}
 	
 	/**
@@ -589,9 +546,6 @@ class AdminPanelManager {
 		if ( isset( $datas['default'] ) ) {
 			$field['default'] = filter_var( $datas['default'], FILTER_SANITIZE_STRING );
 		}
-		if ( isset( $datas['special_type_params'] ) ) {
-			$field['default'] = filter_var( $datas['default'], FILTER_SANITIZE_STRING );
-		}
 		
 		// Reset the users array if it exists
 		$field['users'] = array();
@@ -763,10 +717,12 @@ class AdminPanelManager {
 						</select>	
 					</td>
 					<td class="param-fields" id="param-fields-<?php echo esc_attr( $id ); ?>">
+						<?php if ( $datas['type'] === 'image' ): ?>
 						<label><?php esc_html_e( 'Height:'); ?></label>
-						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_type_param][height]" value="<?php echo esc_attr( $datas['special_type_param']['height'] ); ?>" />
+						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]" value="<?php echo esc_attr( $datas['special_params']['height'] ); ?>" />
 						<label><?php esc_html_e( 'Width:'); ?></label>
-						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_type_param][width]" value="<?php echo esc_attr( $datas['special_type_param']['width'] ); ?>" />
+						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]" value="<?php echo esc_attr( $datas['special_params']['width'] ); ?>" />
+						<?php endif; ?>
 					</td>
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
@@ -788,8 +744,8 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[new_fields][number_to_replace][real_name]" value="<?php esc_attr_e( 'My field name' ); ?>" /></td>
 					<td>
 						<select name="tfi_fields[new_fields][number_to_replace][type]">
-							<?php foreach ( $field_types as $type_id => $name ): ?>
-							<option value="<?php echo esc_attr( $type_id ); ?>"><?php esc_html_e( $name ); ?></option>
+							<?php foreach ( $field_types as $type_id => $param ): ?>
+							<option value="<?php echo esc_attr( $type_id ); ?>"><?php esc_html_e( $param['display_name'] ); ?></option>
 							<?php endforeach; ?>
 						</select>	
 					</td>
