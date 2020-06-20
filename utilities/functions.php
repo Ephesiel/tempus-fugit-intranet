@@ -6,7 +6,7 @@ if ( ! function_exists( 'tfi_get_users' ) ) {
      * 
      * Get all tfi register user, it can be all users of a specific type.
      * 
-     * @since 1.0.1
+     * @since 1.1.0
      * @param string $type The wanted user type. Default = null
      * @return array all users of the database with a specific type if asking.
      */

@@ -23,8 +23,8 @@ class InstallManager {
      * @static
      */
     public static function plugin_activation() {
-        self::add_options();
         self::add_roles();
+        self::add_options();
         self::create_table();
     }
 
@@ -51,6 +51,7 @@ class InstallManager {
      * 
      * Add every options required for the plugin, with their default value.
      * If the option is already set, it won't be changed.
+     * Add roles before add options, because tfi_users verification needs roles sets
      * 
      * @since 1.0.0
      * @access private
@@ -68,7 +69,7 @@ class InstallManager {
      * 
      * Create a new role and a new capability to allow certain users to access intranet.
      * You can add access_intranet capability to anyone here by adding a piece of code.
-     * (Remember to remove it in the InstallManager::remove_roles method)
+     * (Remember to remove it in the InstallManager::remove_roles method).
      * 
      * @since 1.0.0
      * @access private

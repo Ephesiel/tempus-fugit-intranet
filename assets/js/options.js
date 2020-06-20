@@ -53,7 +53,6 @@ function tfi_remove_row(id_to_remove) {
  * Tfi_move_row_to_up.
  * 
  * Move a row to the up
- * It changes the score values between both rows
  *  
  * @since 1.0.0
  * 
@@ -62,28 +61,9 @@ function tfi_remove_row(id_to_remove) {
 function tfi_move_row_to_up(id_to_move) {
     let bottom_element          = document.getElementById(id_to_move);
     let top_element             = bottom_element.previousElementSibling;
-    let bottom_score_element    = bottom_element.getElementsByClassName("field-score")[0];
-    let top_score_element       = top_element.getElementsByClassName("field-score")[0];
-    let bottom_score            = bottom_score_element.getAttribute("value");
-    let top_score               = top_score_element.getAttribute("value");
-
-    top_score_element.setAttribute("value", bottom_score);
-    bottom_score_element.setAttribute("value", top_score);
 
     bottom_element.parentNode.insertBefore(bottom_element, top_element);
     tfi_hide_first_row_button();
-}
-
-/**
- * Tfi_increase_field_score.
- * 
- * Increase the new field score and no rows will have the same score values 
- *  
- * @since 1.0.0
- */
-function tfi_increase_field_score() {
-    let input_to_increase_score = document.querySelector("#tfi-field-new .field-score");
-    input_to_increase_score.setAttribute("value", parseInt(input_to_increase_score.getAttribute("value")) + 1);
 }
 
 /**
