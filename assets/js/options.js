@@ -9,7 +9,7 @@
  * 
  * @param {string} [table_id]       The id of the table were the row will be added
  * @param {string} [row_ids_suffix] The string to put before the id (the id is a number)
- * @param {string} [replace_value]  The given value will be changed by the new id (without the suffix) on name and onclick attribute
+ * @param {string} [replace_value]  The given value will be changed by the new id (without the suffix) everywhere inside the new row
  */
 function tfi_add_row(table_id, row_ids_suffix, replace_value) {
     let table = document.querySelector("#" + table_id + " tbody");
@@ -22,15 +22,8 @@ function tfi_add_row(table_id, row_ids_suffix, replace_value) {
         existing_row = document.getElementById(row_ids_suffix + counter);
     } while (existing_row != undefined);
     row_to_add.setAttribute("id", row_ids_suffix + counter);
-    row_to_add.querySelectorAll("*").forEach(function(item) {
-        if (item.getAttribute("name") != null) {
-            item.setAttribute("name", item.getAttribute("name").replace(replace_value, counter));
-        }
-        if (item.getAttribute("onclick") != null) {
-            console.log(item.getAttribute("onclick"), item.getAttribute("onclick").replace(replace_value, counter));
-            item.setAttribute("onclick", item.getAttribute("onclick").replace(replace_value, counter));
-        }
-    });
+    // Replace all occurence of replace_value by the new counter
+    row_to_add.innerHTML = row_to_add.innerHTML.split(replace_value).join(counter);
     row_to_add.removeAttribute("hidden");
     table.insertBefore(row_to_add, row_to_clone);
 }
@@ -69,7 +62,7 @@ function tfi_move_row_to_up(id_to_move) {
 /**
  * Tfi_hide_first_row_button.
  * 
- * Hide the first button which allow to permute rows.
+ * Hide the first button which allows to permute rows.
  * It usefull because the first row cannot move up obviously
  *  
  * @since 1.0.0
@@ -84,8 +77,38 @@ function tfi_hide_first_row_button() {
     }
 }
 
+/**
+ * Tfi_change_type_param.
+ * 
+ * When a field type is changed, special parameters of this field need to changed too
+ * So it will display each parameters usefull and hide others
+ *  
+ * @since 1.1.0
+ * @param {HTML DOM Element} [field_type_select]      Represents the select element where the type is chosen
+ */
+function tfi_change_type_param(field_type_select) {
+    let type        = field_type_select.value;
+    let param_row   = document.getElementById(field_type_select.getAttribute("param-row"));
+
+    Array.from(param_row.getElementsByClassName("special-param-wrapper")).forEach(function(element) {
+        if (element.getAttribute("field-type") == type) {
+            element.removeAttribute("hidden");
+        }
+        else {
+            element.setAttribute("hidden", true);
+        }
+    });
+}
+
 window.addEventListener("DOMContentLoaded", function(event) {
     tfi_hide_first_row_button();
+
+    Array.from(document.getElementsByClassName("field-type-select")).forEach(function(element) {
+        element.addEventListener("change", function(event) {
+            tfi_change_type_param( event.target );
+        });
+        tfi_change_type_param(element);
+    });
 });
 
 /**

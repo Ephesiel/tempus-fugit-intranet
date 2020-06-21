@@ -17,3 +17,16 @@
     border: none;
     font-size: 20px;
 }
+
+.tfi-options-table .param-fields {
+    display: flex;
+}
+
+.tfi-options-table .param-fields label {
+    font-weight: bold;
+}
+
+.tfi-options-table .param-fields input[type="number"] {
+    width: 70px;
+    margin-right: 5px;
+}

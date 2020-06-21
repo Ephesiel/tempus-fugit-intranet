@@ -317,6 +317,16 @@ class AdminPanelManager {
                     }
                     $field['users'] = $users;
                 }
+                /**
+                 * This is because this value should be an array
+                 */
+                if ( isset( $field['special_params']['mandatory_domains'] ) ) {
+                    $domains = array();
+                    foreach( explode( ',', $field['special_params']['mandatory_domains'] ) as $domain ) {
+                        $domains[] = $domain;
+                    }
+                    $field['special_params']['mandatory_domains'] = $domains;
+                }
 
                 $new_fields[$field['id']] = $field;
             }
@@ -528,7 +538,7 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][id]" value="<?php echo esc_attr( $id ); ?>" /></td>
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][real_name]" value="<?php esc_attr_e( $datas['real_name'] ); ?>" /></td>
 					<td>
-						<select name="tfi_fields[<?php echo esc_attr( $id ); ?>][type]">
+						<select class="field-type-select" name="tfi_fields[<?php echo esc_attr( $id ); ?>][type]" param-row="param-fields-<?php echo esc_attr( $id ); ?>">
 							<?php foreach ( $field_types as $type_id => $param ): ?>
 							<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['type'] ? 'selected' : ''; ?>><?php esc_html_e( $param['display_name'] ); ?></option>
 							<?php endforeach; ?>
@@ -537,19 +547,19 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
 					<td class="param-fields" id="param-fields-<?php echo esc_attr( $id ); ?>">
                         <div hidden class="special-param-wrapper" field-type="image">
-                            <label><?php esc_html_e( 'H:' ); ?></label>
+                            <label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
                             <input  type="number"
                                     name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]"
                                     value="<?php echo isset( $datas['special_params']['height'] ) ? esc_attr( $datas['special_params']['height'] ) : 0; ?>" />
                         </div>
                         <div hidden class="special-param-wrapper" field-type="image">
-                            <label><?php esc_html_e( 'W:' ); ?></label>
+                            <label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
                             <input  type="number"
                                     name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]"
                                     value="<?php echo isset( $datas['special_params']['width'] ) ? esc_attr( $datas['special_params']['width'] ) : 0; ?>" />
                         </div>
                         <div hidden class="special-param-wrapper" field-type="link">
-                            <label><?php esc_html_e( 'D:' ); ?></label>
+                            <label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
                             <input  type="text"
                                     name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][mandatory_domains]"
                                     value="<?php echo isset( $datas['special_params']['mandatory_domains'] ) ? esc_attr( implode( ',', $datas['special_params']['mandatory_domains'] ) ) : ''; ?>"
@@ -573,7 +583,7 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[number_to_replace][id]" value="<?php esc_attr_e( 'field_name' ); ?>" /></td>
 					<td><input type="text" name="tfi_fields[number_to_replace][real_name]" value="<?php esc_attr_e( 'My field name' ); ?>" /></td>
 					<td>
-						<select name="tfi_fields[number_to_replace][type]">
+						<select class="field-type-select" name="tfi_fields[number_to_replace][type]" param-row="param-fields-number_to_replace">
 							<?php foreach ( $field_types as $type_id => $param ): ?>
 							<option value="<?php echo esc_attr( $type_id ); ?>"><?php esc_html_e( $param['display_name'] ); ?></option>
 							<?php endforeach; ?>
@@ -581,6 +591,25 @@ class AdminPanelManager {
 					</td>
 					<td><input type="text" name="tfi_fields[number_to_replace][default]" value="" /></td>
 					<td class="param-fields" id="param-fields-number_to_replace">
+                        <div hidden class="special-param-wrapper" field-type="image">
+                            <label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
+                            <input  type="number"
+                                    name="tfi_fields[number_to_replace][special_params][height]"
+                                    value="0" />
+                        </div>
+                        <div hidden class="special-param-wrapper" field-type="image">
+                            <label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
+                            <input  type="number"
+                                    name="tfi_fields[number_to_replace][special_params][width]"
+                                    value="0" />
+                        </div>
+                        <div hidden class="special-param-wrapper" field-type="link">
+                            <label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
+                            <input  type="text"
+                                    name="tfi_fields[number_to_replace][special_params][mandatory_domains]"
+                                    value=""
+                                    placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
+                        </div>
 					</td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
 					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[number_to_replace][users][<?php echo esc_attr( $type_id ); ?>]" /></td>
