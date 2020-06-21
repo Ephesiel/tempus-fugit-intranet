@@ -70,6 +70,32 @@ class OptionsManager {
     );
 
     /**
+     * On_installation.
+     * 
+     * Are we on the installation step.
+     * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @var bool
+     */
+    private $on_installation;
+
+    /**
+     * OptionsManager constructor.
+     * 
+     * Not verify usefull in most case, but we can set $on_installation to true
+     * 
+     * @since 1.1.0
+     * @access public
+     * 
+     * @param bool $on_installation If we are on the installation step. Default false.
+     */
+    public function __construct( $on_installation = false ) {
+        $this->on_installation = $on_installation;
+    }
+
+    /**
      * Update_options.
      * 
      * Update all options in the database
@@ -94,11 +120,23 @@ class OptionsManager {
         }
     }
 
+    /**
+     * Verify_option.
+     * 
+     * Launch the verification method of a specific option.
+     * Note that each option must have it's own method verification, at least for update verification.
+     * 
+     * @since 1.1.0
+     * @access public
+     * 
+     * @return mixed    the sanitize value of an option.
+     * @return false    the option doesn't exist
+     */
     public function verify_option( $option_name, $value ) {
-        // Remove the 'tfi_'
-        $option_name = substr( $option_name, 4 );
+        if ( array_key_exists( $option_name, self::$default_options ) ) {
+            // Remove the 'tfi_'
+            $option_name = substr( $option_name, 4 );
 
-        if ( method_exists( $this, 'verify_' . $option_name ) ) {
             return call_user_func( array( $this, 'verify_' . $option_name ), $value );
         }
 
@@ -106,7 +144,13 @@ class OptionsManager {
     }
 
     /**
+     * Verify_shortcut.
      * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param array $shortcut   the value to verify for the option tfi_shortcut
+     * @return array            $shortcut sanitized
      */
     private function verify_shortcut( $shortcut ) {
         if ( ! is_array( $shortcut ) ) {
@@ -129,7 +173,13 @@ class OptionsManager {
     }
 
     /**
+     * Verify_user_page_id.
      * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param int $new_user_page_id     the page id for the option tfi_user_page  
+     * @return int                      $new_user_page_id sanitized
      */
     private function verify_user_page_id( $new_user_page_id ) {
         if ( ! is_numeric( $new_user_page_id ) ) {
@@ -152,7 +202,13 @@ class OptionsManager {
     }
 
     /**
+     * Verify_user_types.
      * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param array $user_types     contains all user types to verify for the option tfi_user_types
+     * @return array                $user_types sanitized
      */
     private function verify_user_types( $user_types ) {
         if ( ! is_array( $user_types ) ) {
@@ -173,7 +229,13 @@ class OptionsManager {
     }
 
     /**
+     * Verify_fields.
      * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param array $fields     contains all fields to verify for the option tfi_fields
+     * @return array            $fields sanitized
      */
     private function verify_fields( $fields ) {
         if ( ! is_array( $fields ) ) {
@@ -187,10 +249,11 @@ class OptionsManager {
         foreach ( $fields as $field_slug => $field_value ) {
             $sanitize_field_slug = $this->create_slug_from_string( $field_slug );
             $sanitize_field_value = array(
-                'real_name' => 'No name set',
-                'type'		=> 'text',
-                'default'	=> '',
-                'users' 	=> array()
+                'real_name'      => 'No name set',
+                'type'		     => 'text',
+                'default'	     => '',
+                'users' 	     => array(),
+                'special_params' => array()
             );
 
             if ( isset( $field_value['real_name'] ) && ! empty( $field_value['real_name'] ) ) {
@@ -210,6 +273,29 @@ class OptionsManager {
                 }
             }
 
+            if ( $sanitize_field_value['type'] === 'image' ) {
+                $sanitize_field_value['special_params']['height'] = 20;
+                $sanitize_field_value['special_params']['width'] = 20;
+
+                if ( isset( $field_value['special_params']['height'] ) && is_numeric( $field_value['special_params']['height'] ) ) {
+                    $sanitize_field_value['special_params']['height'] = floor( abs( $field_value['special_params']['height'] ) );
+                }
+                if ( isset( $field_value['special_params']['width'] ) && is_numeric( $field_value['special_params']['width'] ) ) {
+                    $sanitize_field_value['special_params']['width'] = floor( abs( $field_value['special_params']['width'] ) );
+                }
+            }
+            else if ( $sanitize_field_value['type'] === 'link' ) {
+                $sanitize_field_value['special_params']['mandatory_domains'] = array();
+
+                if ( isset( $field_value['special_params']['mandatory_domains'] ) && is_array( $field_value['special_params']['mandatory_domains'] ) ) {
+                    foreach ( $field_value['special_params']['mandatory_domains'] as $domain_name ) {
+                        if ( tfi_is_valid_domain_name( $domain_name ) ) {
+                            $sanitize_field_value['special_params']['mandatory_domains'][] = $domain_name;
+                        }
+                    }
+                }
+            }
+
             $new_fields[$sanitize_field_slug] = $sanitize_field_value;
         }
 
@@ -217,7 +303,13 @@ class OptionsManager {
     }
 
     /**
+     * Verify_users.
      * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param array $users  contains all users to verify for the option tfi_users
+     * @return array        $users sanitized
      */
     private function verify_users( $users ) {
         if ( ! is_array( $users ) ) {
@@ -228,13 +320,22 @@ class OptionsManager {
         $fields     = tfi_get_option( 'tfi_fields' );
         $new_users  = array();
 
+        /**
+         * User verification according to $on_installation attribute is due to wp_roles->add_cap.
+         * Indeed, this method doesn't change the actual users array and so administrators etc... do not have the access_intranet cap.
+         * Because wp_roles->add_cap is called during installation, we need to do a different checkup
+         */
         foreach ( $users as $user_id => $user_datas ) {
             $user = get_user_by( 'id', $user_id );
-            if ( $user === false || ! array_key_exists( 'access_intranet', $user->allcaps ) ) {
-                wp_die( var_dump( $user->allcaps ) );
+            if ( $user === false ) {
                 continue;
             }
-            wp_die( var_dump( $user )  . $user_id );
+            if ( $this->on_installation && empty( array_intersect( $user->roles, InstallManager::$access_intranet_roles ) ) ) {
+                continue;
+            }
+            if ( ! $this->on_installation && ! array_key_exists( 'access_intranet', $user->allcaps ) ) {
+                continue;
+            }
 
             $sanitize_user_datas = array(
                 'user_type'		 => 'default_type',
@@ -254,15 +355,38 @@ class OptionsManager {
 
             $new_users[$user_id] = $sanitize_user_datas;
         }
-        wp_die( var_dump( $users ) );
 
         return $new_users;
     }
 
+    /**
+     * Verify_field_types.
+     * 
+     * This option cannot be changed by anyone.
+     * It should be like set by default in the current version of the plugin.
+     * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param array $field_types    contains all field types to verify for the option tfi_field_types
+     * @return array                the default and mandatory tfi_field_types option
+     */
     private function verify_field_types( $field_types ) {
         return self::$default_options['tfi_field_types'];
     }
 
+    /**
+     * Create_slug_from_string.
+     * 
+     * Create a slug form a given string
+     * It has no space, no capital letter and no special chars only underscores
+     * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param string $string    the string to create a slug from
+     * @return string           $string as a slug 
+     */
     private function create_slug_from_string( $string ) {
         return preg_replace( '/[^a-z0-9_]/', '', str_replace( ' ', '_', strtolower( $string ) ) );
     }

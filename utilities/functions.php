@@ -115,3 +115,21 @@ if ( ! function_exists( 'tfi_re_array_files' ) ) {
         return $file_ary;
     }
 }
+
+if ( ! function_exists( 'tfi_is_valid_domain_name' ) ) {
+    /**
+     * Tfi_is_valid_domain_name.
+     * 
+     * Verify that a string is a valid domain name
+     * 
+     * @since 1.1.0
+     * @param string $domain_name   The domain name to verify
+     * @return bool                 If $domain_name is a valid domain name
+     * @author velcrow https://stackoverflow.com/questions/1755144/how-to-validate-domain-name-in-php
+     */
+    function tfi_is_valid_domain_name( $domain_name ) {
+        return ( preg_match( "/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $domain_name ) // valid chars check
+              && preg_match( "/^.{1,253}$/", $domain_name )                                         // overall length check
+              && preg_match( "/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $domain_name ) );                   // length of each label
+    }
+}

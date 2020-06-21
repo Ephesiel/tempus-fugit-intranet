@@ -13,6 +13,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 class InstallManager {
 
     /**
+     * Access_intranet_roles.
+     * 
+     * All roles which have an access to intranet.
+     * If you're using this plugin and you want that a special role has access to intranet, please add it to the list.
+     * By default only administrator and tfi_user roles have this access
+     * 
+     * @since 1.1.0
+     * @access public
+     * @static
+     * 
+     * @var array
+     */
+    public static $access_intranet_roles = array( 'administrator', 'tfi_user' );
+
+    /**
      * Plugin_activation.
      * 
      * Call every methods needed at activation.
@@ -60,7 +75,7 @@ class InstallManager {
     private static function add_options() {
         require_once TFI_PATH . 'includes/options.php';
 
-        $option_manager = new OptionsManager;
+        $option_manager = new OptionsManager( true );
         $option_manager->update_options();
     }
 
@@ -80,7 +95,9 @@ class InstallManager {
         global $wp_roles;
 
         add_role( 'tfi_user', __( 'Intranet user' ), array( 'access_intranet' => true ) );
-        $wp_roles->add_cap( 'administrator', 'access_intranet' );
+        foreach ( self::$access_intranet_roles as $role_name ) {
+            $wp_roles->add_cap( $role_name, 'access_intranet' );
+        }
     }
 
     /**

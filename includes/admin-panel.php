@@ -466,7 +466,7 @@ class AdminPanelManager {
 		) );
 		$actual_page_id = tfi_get_option( 'tfi_user_page_id' );
 		
-		if ( !empty( $pages ) ): ?>
+		if ( ! empty( $pages ) ): ?>
 		<select name="tfi_user_page_id">
 			<?php
 			foreach( $pages as $page ) {
@@ -481,7 +481,7 @@ class AdminPanelManager {
 		<p><i class="tfi-option-warning"><?php esc_html_e( 'This page isn\'t set yet, you need to submit the form before' ); ?></i></p>
 		<?php endif; ?>
 		<?php else: ?>
-		<i><?php printf( esc_html_e( 'To be able to choose a page, please create a new page with the %s model' ), '<b>' . esc_html__( 'Intranet user page Template' ) . '</b>' ); ?></i>
+		<i><?php printf( esc_html__( 'To be able to choose a page, please create a new page with the %s model' ), '<b>' . esc_html__( 'Intranet user page Template' ) . '</b>' ); ?></i>
 		<?php endif; ?>
 		<?php
 	}
@@ -536,12 +536,25 @@ class AdminPanelManager {
 					</td>
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
 					<td class="param-fields" id="param-fields-<?php echo esc_attr( $id ); ?>">
-						<?php if ( $datas['type'] === 'image' ): ?>
-						<label><?php esc_html_e( 'Height:'); ?></label>
-						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]" value="<?php echo esc_attr( $datas['special_params']['height'] ); ?>" />
-						<label><?php esc_html_e( 'Width:'); ?></label>
-						<input type="number" name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]" value="<?php echo esc_attr( $datas['special_params']['width'] ); ?>" />
-						<?php endif; ?>
+                        <div hidden class="special-param-wrapper" field-type="image">
+                            <label><?php esc_html_e( 'H:' ); ?></label>
+                            <input  type="number"
+                                    name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]"
+                                    value="<?php echo isset( $datas['special_params']['height'] ) ? esc_attr( $datas['special_params']['height'] ) : 0; ?>" />
+                        </div>
+                        <div hidden class="special-param-wrapper" field-type="image">
+                            <label><?php esc_html_e( 'W:' ); ?></label>
+                            <input  type="number"
+                                    name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]"
+                                    value="<?php echo isset( $datas['special_params']['width'] ) ? esc_attr( $datas['special_params']['width'] ) : 0; ?>" />
+                        </div>
+                        <div hidden class="special-param-wrapper" field-type="link">
+                            <label><?php esc_html_e( 'D:' ); ?></label>
+                            <input  type="text"
+                                    name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][mandatory_domains]"
+                                    value="<?php echo isset( $datas['special_params']['mandatory_domains'] ) ? esc_attr( implode( ',', $datas['special_params']['mandatory_domains'] ) ) : ''; ?>"
+                                    placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
+                        </div>
 					</td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
 					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[<?php echo esc_attr( $id ); ?>][users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'] ) ? 'checked ' : ''; ?>/></td>
