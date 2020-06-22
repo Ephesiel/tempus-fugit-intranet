@@ -57,13 +57,23 @@ class OptionsManager {
                 'real_name' => 'Facebook',
                 'type' => 'link',
                 'default' => '',
-                'users' => array( 'default_type' )
+                'users' => array( 'default_type' ),
+                'special_params' => array(
+                    'mandatory_domains' => array(
+                        'facebook'
+                    )
+                )
             ),
             'twitter' => array(
                 'real_name' => 'Twitter',
                 'type' => 'link',
                 'default' => '',
-                'users' => array( 'default_type' )
+                'users' => array( 'default_type' ),
+                'special_params' => array(
+                    'mandatory_domains' => array(
+                        'twitter'
+                    )
+                )
             )
         ),
         'tfi_users' => array()

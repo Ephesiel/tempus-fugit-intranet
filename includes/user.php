@@ -161,7 +161,7 @@ class User {
 
             foreach ( tfi_get_option( 'tfi_fields' ) as $slug => $field ) {
                 if ( in_array( $this->user_type(), $field['users'] ) || in_array( $slug, $this->user_datas['special_fields'] ) ) {
-                    $allowed_fields[$slug] = new Field( $slug, $field['real_name'], $field['default'], $field['type'], $field['type'] == 'image' );
+                    $allowed_fields[$slug] = new Field( $slug, $field['real_name'], $field['default'], $field['type'], $field['special_params'], $field['type'] == 'image' );
                 }
             }
             
@@ -244,17 +244,31 @@ class User {
                             $result[$field->name]  = true;
                         }
                         else {
-                            $result[$field->name]['tfi-error'][]  = __( 'This value cannot be sanitized as a text' );
+                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a text' );
                         }
                     break;
                     case 'link':
                         $sanitize = esc_url( filter_var( stripslashes( $datas[$field->name] ), FILTER_SANITIZE_STRING ) );
                         if ( ! empty( $sanitize ) ) {
-                            $to_send[$field->name] = $sanitize;
-                            $result[$field->name]  = true;
+                            $success = true;
+
+                            if ( isset( $field->special_params['mandatory_domains'] ) && ! empty( $field->special_params['mandatory_domains'] ) ) {
+                                $domains = $field->special_params['mandatory_domains'];
+                                $domain = parse_url( $sanitize, PHP_URL_HOST );
+                                $success = in_array( $domain, $domains ) || ( substr( $domain, 0, 4 ) === 'www.' && in_array( substr( $domain, 4 ), $domains ) );
+
+                                if ( ! $success ) {
+                                    $result[$field->name]['tfi-error'][] = sprintf( __( 'The hostname isn\'t in the mandatory names, please enter a link in one of those domains: %s' ), implode( ',', $field->special_params['mandatory_domains'] ) );
+                                }
+                            }
+
+                            if ( $success ) {
+                                $to_send[$field->name] = $sanitize;
+                                $result[$field->name]  = true;
+                            }
                         }
                         else {
-                            $result[$field->name]['tfi-error'][]  = __( 'This value cannot be sanitized as a link' );
+                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a link' );
                         }
                     break;
                     case 'image':
@@ -282,8 +296,6 @@ class User {
             
             $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $to_send ) ), array( 'user_id' => $this->id ), null, '%d' );
 
-            //wp_die( var_dump( $db_result ) );
-
             if ( $db_result === false ) {
                 return false;
             }
@@ -305,13 +317,10 @@ class User {
      * @return string the url of the file
      */
     private function get_file_link( $value ) {
-        $upload_dir = wp_upload_dir();
-
-        if ( $upload_dir['error'] !== false || empty( $value ) ) {
-            return $value;
+        if ( defined( 'TFI_UPLOAD_FOLDER_URL' ) && ! empty( $value ) ) {
+            return TFI_UPLOAD_FOLDER_URL . '/' . $value;
         }
-
-        return $upload_dir['baseurl'] . '/' . TFI_UPLOAD_FOLDER . '/' . $value;
+        return $value;
     }
 
     /**
@@ -354,16 +363,30 @@ class User {
 
         if ( $field->type === 'image' ) {
             $extension = array_search(
-                $finfo->file($file['tmp_name']),
+                $finfo->file( $file['tmp_name'] ),
                 array(
                     'jpg' => 'image/jpeg',
                     'png' => 'image/png',
                     'gif' => 'image/gif',
                 )
             );
-
+    
             if ( $extension === false ) {
-                return array( 'tfi-error' => array( __( 'This value should be an image, please give a .png, .jpeg or .gif file' ) ) );
+                return array( __( 'This value should be an image, please give a .png, .jpeg or .gif file' ) );
+            }
+    
+            // resize the image
+            if ( isset( $field->special_params['width'] ) && isset( $field->special_params['height'] ) ) {
+                try {
+                    require_once TFI_PATH . 'utilities/resize-image.php';
+    
+                    $resize_image = new ResizeImage( $file['tmp_name'] );
+                    $resize_image->resize_to(  $field->special_params['width'],  $field->special_params['height'] );
+                    $resize_image->save_image( $file['tmp_name'] );
+                }
+                catch( \Exception $e ) {
+                    return array( __( $e->getMessage() ) );
+                }
             }
         }
 
@@ -375,16 +398,21 @@ class User {
 
         $upload_dir = wp_upload_dir();
 
-        if ( $upload_dir['error'] !== false ) {
+        if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
             return array( 'tfi-error' => array( __( 'Impossible to find the upload directory' ) ) );
         }
 
         // The id is used to be sure that the dirname is unique.
         $user_dirname   = $user->user_nicename . '-' . $user->ID;
-        $dirname        = $upload_dir['basedir'] . '/' . TFI_UPLOAD_FOLDER . '/' . $user_dirname;
+        $dirname        = TFI_UPLOAD_FOLDER_DIR . '/' . $user_dirname;
 
         if ( ! file_exists( $dirname ) ) {
             wp_mkdir_p( $dirname );
+        }
+
+        // Delete every files with the same name (because the extension can change and we don't want 3 different files)
+        foreach ( glob( $dirname . '/' . $field->name . '.*' ) as $filename ) {
+            unlink( $filename ); 
         }
 
         $filename   = $field->name . '.' . $extension;
@@ -440,29 +468,33 @@ class User {
  * Store a field and all its datas to use it easily
  * 
  * @since 1.0.0
+ * @since 1.1.0 Add $special_params attribute
  */
 class Field {
     public $name;
     public $display_name;
     public $default_value;
     public $type;
+    public $special_params;
     public $is_file;
 
     /**
      * Field constructor
      * 
      * @since 1.0.0
-     * @param string $name          the field's slug 
-     * @param string $display_name  pretty name displayed on html
-     * @param string $default_value the field's default
-     * @param string $type          the field's type (link, image, text...)
-     * @param bool   $is_file       is the value a filename which point to the path of the file in the upload folder. Default false.
+     * @param string $name              the field's slug 
+     * @param string $display_name      pretty name displayed on html
+     * @param string $default_value     the field's default
+     * @param string $type              the field's type (link, image, text...)
+     * @param array  $special_params    contains alla special params of a specific field
+     * @param bool   $is_file           is the value a filename which points to the path of the file in the upload folder. Default false.
      */
-    public function __construct( $name, $display_name, $default_value, $type, $is_file = false ) {
+    public function __construct( $name, $display_name, $default_value, $type, $special_params, $is_file = false ) {
         $this->name             = $name;
         $this->display_name     = $display_name;
         $this->default_value    = $default_value;
         $this->type             = $type;
+        $this->special_params   = $special_params;
         $this->is_file          = $is_file;
     }
 }
