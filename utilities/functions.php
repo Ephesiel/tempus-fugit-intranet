@@ -2,29 +2,51 @@
 
 if ( ! function_exists( 'tfi_get_users' ) ) {
     /**
-     * Tfi_get_user.
+     * Tfi_get_users.
      * 
-     * Get all tfi register user, it can be all users of a specific type.
+     * Get all wordpress users which have a specific tfi_user type.
+     * If no $user_type set, return all tfi users
      * 
      * @since 1.1.0
-     * @param string $type The wanted user type. Default = null
-     * @return array all users of the database with a specific type if asking.
+     * @param string $user_type The wanted user type. Default = null
+     * @return array            All wordpress users which match with the specific type.
      */
-    function tfi_get_user( $user_type = null ) {
-        if ( $user_type === null ) {
-            return get_option( 'tfi_users' );
-        }
-        else {
-            $to_return = array();
-
-            foreach ( get_option( 'tfi_users' ) as $key => $value ) {
-                if ( isset( $value['user_type'] ) && $value['user_type'] == $user_type ) {
-                    $to_return[$key] = $value;
-                }
+    function tfi_get_users( $user_type = null ) {
+        $users = array();
+        foreach( get_option( 'tfi_users' ) as $user_id => $user_datas ) {
+            if ( $user_type === null ) {
+                $users[] = get_user_by( 'id', $user_id );
             }
-
-            return $to_return;
+            else if ( isset( $user_datas['user_type'] ) && $user_datas['user_type'] == $user_type ) {
+                $users[] = get_user_by( 'id', $user_id );
+            }
         }
+        return $users;
+    }
+}
+
+if ( ! function_exists( 'tfi_get_users_which_have_field' ) ) {
+    /**
+     * Tfi_get_users_which_have_field.
+     * 
+     * Get all wordpress users which are allowed to user a specific field.
+     * 
+     * @since 1.1.1
+     * @param string $field_slug    The wanted field.
+     * @return array                All wordpress users which have the specific field.
+     */
+    function tfi_get_users_which_have_field( $field_slug ) {
+        require_once TFI_PATH . '/includes/user.php';
+
+        $users = array();
+        foreach ( tfi_get_users() as $user ) {
+            $user_obj = new TFI\User( $user->ID );
+            if ( array_key_exists( $field_slug, $user_obj->allowed_fields() ) ) {
+                $users[] = $user;
+            }
+        }
+
+        return $users;
     }
 }
 
