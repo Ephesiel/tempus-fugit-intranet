@@ -130,8 +130,8 @@ class ResizeImage {
 
 		// The new image is created transparent with the given size
 		$this->new_image = imagecreatetruecolor( $width, $height );
-		$black = imagecolorallocate($this->new_image, 0, 0, 0);
-		imagecolortransparent( $this->new_image, $black );
+		imagealphablending( $this->new_image, false );
+		imagesavealpha( $this->new_image, true );
  
 		imagecopyresampled( $this->new_image, $this->image, $margin_x, $margin_y, 0, 0, $new_image_width, $new_image_height, $image_width, $image_height );
 	}

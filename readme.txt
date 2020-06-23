@@ -21,7 +21,13 @@ Intranet to allow every students to add their own datas at home whitout passing 
 * Add some usefull functions to select users
 
 = 1.1.2 =
-* Image are not resize if the size is good. A resize png 
+* Image are not resize if the size is good. A resize png
+
+= 1.1.3 =
+* Add parallax usage for the tempus-fugi site (css and js)
+
+= 1.1.4 =
+* Correction of the ugly png resize.
 
 == How to use ==
 

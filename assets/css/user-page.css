@@ -8,6 +8,23 @@ body {
     display: flex;
     flex-direction: column;
     height: 95vh;
+    margin: 0;
+}
+
+footer, header {
+    background-color: #f1f1f1;
+}
+
+footer {
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
+
+#content-prl {
+    background-color: #f1f1f1;
+    margin: 0 !important;
+    padding: 50px;
 }
 
 #tfi-user-page-header {
@@ -54,6 +71,7 @@ body {
 
 #tfi-user-page-content {
     flex-grow: 1;
+    margin:0;
 }
 
 #tfi-user-page-content .error {
