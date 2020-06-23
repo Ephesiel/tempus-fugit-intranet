@@ -21,6 +21,8 @@ body {
     min-width: 200px;
     text-align: center;
     flex-grow: 1;
+
+    color: #0068ff;
 }
 
 #header-buttons a {
