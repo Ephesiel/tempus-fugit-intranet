@@ -60,26 +60,30 @@ class ResizeImage {
 	/**
 	 * Save the image as the image type the original image was
 	 *
-	 * @param  String[type] $savePath     - The path to store the new image
-	 * @param  string $imageQuality 	  - The qulaity level of image to create
+	 * @param  String[type] $save_path		- The path to store the new image
+	 * @param  string $image_quality 	  	- The qulaity level of image to create
 	 */
-	public function save_image( $savePath, $imageQuality="100" ) {
+	public function save_image( $save_path, $image_quality="100" ) {
+		if ( $this->new_image == null ) {
+			return;
+		}
+
 	    switch( $this->ext ) {
 	        case 'image/jpg':
 	        case 'image/jpeg':
 	            if ( imagetypes() & IMG_JPG ) {
-	                imagejpeg( $this->new_image, $savePath, $imageQuality );
+					imagejpeg( $this->new_image, $save_path, $image_quality );
 	            }
 	            break;
 	        case 'image/gif':
 	            if ( imagetypes() & IMG_GIF ) {
-	                imagegif( $this->new_image, $savePath );
+	                imagegif( $this->new_image, $save_path );
 	            }
 	            break;
 	        case 'image/png':
-	            $invertScaleQuality = 9 - round(($imageQuality/100) * 9);
+	            $invert_scale_quality = 9 - round(($image_quality/100) * 9);
 	            if ( imagetypes() & IMG_PNG ) {
-	                imagepng( $this->new_image, $savePath, $invertScaleQuality );
+	                imagepng( $this->new_image, $save_path, $invert_scale_quality );
 	            }
 	            break;
 	    }
@@ -98,6 +102,10 @@ class ResizeImage {
 
 		if ( $width == 0 ) { $width = $image_width; }
 		if ( $height == 0 ) { $height = $image_height; }
+
+		if ( $width == $image_width && $height == $image_height ) {
+			return;
+		}
 
 		$image_ratio = $image_width / $image_height;
 		$wanted_image_ratio = $width / $height;

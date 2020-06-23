@@ -10,8 +10,18 @@ Intranet to allow every students to add their own datas at home whitout passing 
 
 == Changelog ==
 
-= 1.0 =
+= 1.0.0 =
 * First version of the plugin
+
+= 1.1.0 =
+* You can add a specific domain for links
+* You can add a specific required size for images
+
+= 1.1.1 =
+* Add some usefull functions to select users
+
+= 1.1.2 =
+* Image are not resize if the size is good. A resize png 
 
 == How to use ==
 
