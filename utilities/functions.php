@@ -155,3 +155,42 @@ if ( ! function_exists( 'tfi_is_valid_domain_name' ) ) {
               && preg_match( "/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $domain_name ) );                   // length of each label
     }
 }
+
+if ( ! function_exists( 'tfi_add_temp_folder' ) ) {
+    /**
+     * Tfi_add_temp_folder.
+     * 
+     * Add a new temporary folder
+     * 
+     * @since 1.1.5
+     * @return string the new temporary folder path
+     */
+    function tfi_add_temp_folder() {
+        $temp_folder_name;
+
+        do {
+            do {
+                $temp_folder_name = TFI_TEMP_PATH . bin2hex( random_bytes( 8 ) );
+            } while ( file_exists( $temp_folder_name ) );
+        } while ( ! mkdir( $temp_folder_name ) );
+
+        return $temp_folder_name . '/';
+    }
+}
+
+if ( ! function_exists( 'tfi_remove_temp_folder' ) ) {
+    /**
+     * Tfi_remove_temp_folder.
+     * 
+     * Remove a temporary folder add inside the tmp/ directory
+     * This function must be called after tfi_add_temp_folder
+     * 
+     * @since 1.1.5
+     * @param string $temp_folder_path  The path for the temporary folder given in tfi_add_temp_folder
+     */
+    function tfi_remove_temp_folder( $temp_folder_path ) {
+        if ( strpos( $temp_folder_path, TFI_TEMP_PATH ) === 0 ) {
+            tfi_delete_files( $temp_folder_path );
+        }
+    }
+}

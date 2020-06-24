@@ -37,6 +37,19 @@ class ShortcodesManager {
      */
     private $database_result;
 
+    /**
+     * Fatal_error.
+     * 
+     * Contain the fatal error return by the database
+     * This value is null if no fatal error
+     * 
+     * @since 1.1.5
+     * @access private
+     * 
+     * @var string|null
+     */
+    private $fatal_error;
+
 	/**
 	 * ShortcodesManager constructor.
 	 *
@@ -81,15 +94,20 @@ class ShortcodesManager {
          * Those datas will be send in the database.
          */
         if ( $this->user->is_ok() && array_key_exists( 'tfi_update_user', $_POST ) ) {
-            if ( array_key_exists( 'tfi_update_user', $_FILES ) && ! empty( $_FILES['tfi_update_user'] ) ) {
-                $this->database_result = $this->user->send_new_datas( $_POST['tfi_update_user'], tfi_re_array_files( $_FILES['tfi_update_user'] ) );
+            try {
+                if ( array_key_exists( 'tfi_update_user', $_FILES ) && ! empty( $_FILES['tfi_update_user'] ) ) {
+                    $this->database_result = $this->user->send_new_datas( $_POST['tfi_update_user'], tfi_re_array_files( $_FILES['tfi_update_user'] ) );
+                }
+                else {
+                    $this->database_result = $this->user->send_new_datas( $_POST['tfi_update_user'] );
+                }
+    
+                unset( $_POST['tfi_update_user'] );
+                unset( $_FILES['tfi_update_user'] );
             }
-            else {
-                $this->database_result = $this->user->send_new_datas( $_POST['tfi_update_user'] );
+            catch( \Exception $e ) {
+                $this->fatal_error = $e->getMessage();
             }
-
-            unset( $_POST['tfi_update_user'] );
-            unset( $_FILES['tfi_update_user'] );
         }
     }
 
@@ -114,6 +132,9 @@ class ShortcodesManager {
         }
         if ( $this->database_result === false ) {
             return $this->get_error( 'database_problem' );
+        }
+        if ( $this->fatal_error !== null ) {
+            $output .= $this->get_error( 'fatal' );
         }
 
         $output .= '<form class="tfi-user-form" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" enctype="multipart/form-data" method="POST">';
@@ -333,6 +354,14 @@ class ShortcodesManager {
         $e = esc_html__( 'The database response failed for an unknown reason. Maybe you\'re not connected.' ) . '<br />';
         $e.= esc_html__( 'If you\'re connected it can be a database error and files can have been pushed.' ) . '<br />';
         $e.= esc_html__( 'Please refer to your administrator about this error.' );
+
+        return $e;
+    }
+
+    private function error_fatal() {
+        $e = '<b>' . esc_html( __( 'Fatal error:' ) ) . '</b> ' . esc_html( $this->fatal_error ) . '<br/>';
+        $e.= esc_html__( 'A fatal error is an unexpected, unwanted error which is not due to your for most cases. Please try again and if the error still appear, contact your support.' ) . '<br />';
+        $e.= esc_html__( 'You should consider that your datas are not saved.' );
 
         return $e;
     }

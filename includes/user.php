@@ -333,6 +333,7 @@ class User {
      * @param array $file the file to save in the upload dir. Keys should be the same than $_FILES (see in documentation)
      * @return string the path name to be able to store it in the database
      * @return array of errors if one occured
+     * @throws \Exception if there is a fatal error on upload
      */
     private function upload_file( $field, $file ) {
         if ( $file['error'] !== UPLOAD_ERR_OK ) {
@@ -372,20 +373,29 @@ class User {
             );
     
             if ( $extension === false ) {
-                return array( __( 'This value should be an image, please give a .png, .jpeg or .gif file' ) );
+                return array( 'tfi-error' => array( __( 'This value should be an image, please give a .png, .jpeg or .gif file' ) ) );
             }
     
             // resize the image
             if ( isset( $field->special_params['width'] ) && isset( $field->special_params['height'] ) ) {
                 try {
-                    require_once TFI_PATH . 'utilities/resize-image.php';
-    
-                    $resize_image = new ResizeImage( $file['tmp_name'] );
-                    $resize_image->resize_to(  $field->special_params['width'],  $field->special_params['height'] );
-                    $resize_image->save_image( $file['tmp_name'] );
+                    if ( $extension != 'gif' ) {
+                        require_once TFI_PATH . 'utilities/resize-image.php';
+
+                        $resize_image = new ResizeImage( $file['tmp_name'] );
+                        $resize_image->resize_to(  $field->special_params['width'],  $field->special_params['height'] );
+                        $resize_image->save_image( $file['tmp_name'] );
+                    }
+                    else {
+                        require_once TFI_PATH . 'utilities/resize-gif.php';
+
+                        $resize_gif = new ResizeGif( $file['tmp_name'] );
+                        $resize_gif->resize_to(  $field->special_params['width'],  $field->special_params['height'] );
+                        $resize_gif->save_image( $file['tmp_name'] );
+                    }
                 }
-                catch( \Exception $e ) {
-                    return array( __( $e->getMessage() ) );
+                catch ( \Exception $e) {
+                    throw new \Exception( sprintf( __( 'This error occured when the image %1$s resized: %2$s' ), $field->display_name, $e->getMessage() ) );
                 }
             }
         }
@@ -399,7 +409,7 @@ class User {
         $upload_dir = wp_upload_dir();
 
         if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
-            return array( 'tfi-error' => array( __( 'Impossible to find the upload directory' ) ) );
+            throw new \Exception( 'Impossible to find the upload directory.' );
         }
 
         // The id is used to be sure that the dirname is unique.
@@ -419,7 +429,7 @@ class User {
         $result     = move_uploaded_file ( $file['tmp_name'], $dirname . '/' . $filename );
 
         if ( $result === false ) {
-            return array( 'tfi-error' => array( __( 'Impossible to write the file' ) ) );
+            throw new \Exception( 'Impossible to write the file.' );
         }
 
         // Store the path name (without the plugin directory to be able to reuse the path if we change it)

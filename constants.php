@@ -10,6 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'TFI_URL', plugins_url( '/', __FILE__ ) );
 define( 'TFI_PATH', plugin_dir_path( __FILE__ ) );
 
+define( 'TFI_TEMP_PATH', TFI_PATH . 'tmp/');
+if ( ! file_exists( TFI_TEMP_PATH ) ) {
+	mkdir( TFI_TEMP_PATH );
+}
+
 define( 'TFI_TEMPLATE_PAGE', 'tfi-user-page.php' );
 define( 'TFI_TABLE', 'tfi_datas' );
 
@@ -20,4 +25,4 @@ if ( $upload_dir['error'] === false ) {
 	define( 'TFI_UPLOAD_FOLDER_URL', $upload_dir['baseurl'] . '/tempus_fugit_files' );
 }
 
-define( 'TFI_VERSION', '1.1.1' );
+define( 'TFI_VERSION', '1.1.5' );

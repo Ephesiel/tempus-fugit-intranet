@@ -3,7 +3,7 @@
  * Plugin Name: Tempus Fugit Intranet
  * Plugin URI: http://www.tempusfugit-thegame.com
  * Description: Intranet to allow every students to add their own datas at home whitout passing by the wordpress admin page.
- * Version: 1.1.4
+ * Version: 1.1.5
  * Author: Huftier Benoît
  * Author URI: http://www.tempusfugit-thegame.com
  * 

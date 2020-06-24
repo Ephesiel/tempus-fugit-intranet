@@ -29,6 +29,9 @@ Intranet to allow every students to add their own datas at home whitout passing 
 = 1.1.4 =
 * Correction of the ugly png resize.
 
+= 1.1.5 =
+* The resize has been corrected and add gif support and fatal errors on  the user form
+
 == How to use ==
 
 = After installation =

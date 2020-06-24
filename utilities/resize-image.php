@@ -28,7 +28,7 @@ class ResizeImage {
 			$this->set_image( $filename );
 		}
 		else {
-			throw new \Exception( sprintf( __( 'Image %s can not be found, try another image.' ), $filename ) );
+			throw new \Exception( __( 'The given image can not be found for an unknown reason, try another image.' ) );
 		}
 	}
 
@@ -53,7 +53,11 @@ class ResizeImage {
 	            $this->image = @imagecreatefrompng( $filename );
 	            break;
 	        default:
-	            throw new \Exception( __( 'File is not an image, please use another file type.' ), 1);
+	            throw new \Exception( __( 'File is not an image, please use another file type.' ) );
+		}
+
+		if ( $this->image === false ) {
+			throw new \Exception( __( 'Sorry, parsing your image failed for an unknown reason. First try to be sure that your image has good dimensions.' ) );
 		}
 	}
 
@@ -107,28 +111,22 @@ class ResizeImage {
 			return;
 		}
 
-		$image_ratio = $image_width / $image_height;
-		$wanted_image_ratio = $width / $height;
-	
-		// To center the new image
-		$margin_y = 0;
-		$margin_x = 0;
-		$new_image_width = $image_width;
-		$new_image_height = $image_height;
-	
-		// To keep all the image size inside the new one, resize the height and the width according to the ratio difference 
-		if ( $image_ratio > $wanted_image_ratio ) {
-			$new_image_width = $width;
-			$new_image_height = floor( ( $image_height / $image_width ) * $width );
-			$margin_y = ( $height - $new_image_height ) / 2;
-		}
-		else if ( $image_ratio < $wanted_image_ratio ) {
-			$new_image_width = floor( ( $image_width / $image_height ) * $height );
-			$new_image_height = $height;
-			$margin_x = ( $width - $new_image_width ) / 2;
-		}
+		// Calculate ratio of desired maximum sizes and original sizes.
+		$width_ratio = $width / $image_width;
+		$height_ratio = $height / $image_height;
 
-		// The new image is created transparent with the given size
+		// Ratio used for calculating new image dimensions.
+		$ratio = min( $width_ratio, $height_ratio );
+
+		// Calculate new image dimensions.
+		$new_image_width  = $image_width  * $ratio;
+		$new_image_height = $image_height * $ratio;
+		
+		// To center the new image
+		$margin_x = ( $width - $new_image_width ) / 2;
+		$margin_y = ( $height - $new_image_height ) / 2;
+
+		// The new image is created with the given size
 		$this->new_image = imagecreatetruecolor( $width, $height );
 		imagealphablending( $this->new_image, false );
 		imagesavealpha( $this->new_image, true );
