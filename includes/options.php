@@ -18,6 +18,7 @@ class OptionsManager {
      * All options and their default values
      * 
      * @since 1.1.0
+     * @since 1.3.0     Add tfi_file_folders option
      * 
      * @static
      * @access private
@@ -34,6 +35,12 @@ class OptionsManager {
         'tfi_user_page_id' => -1,
         'tfi_user_types' => array(
             'default_type' => 'Default type'
+        ),
+        'tfi_file_folders' => array(
+            'tempus_fugit_intranet_files' => array(
+                'display_name' => 'Tempus Fugit Intranet Files',
+                'parent' => ''
+            )
         ),
         'tfi_field_types' => array(
             'image' => array(
@@ -239,6 +246,53 @@ class OptionsManager {
     }
 
     /**
+     * Verify_user_types.
+     * 
+     * @since 1.1.0
+     * @access private
+     * 
+     * @param array $file_folders   contains all folder paths to verify for the option tfi_file_folders
+     * @return array                $file_folders sanitized
+     */
+    private function verify_file_folders( $file_folders ) {
+        if ( ! is_array( $file_folders ) ) {
+            return self::$default_options['tfi_file_folders'];
+        }
+
+        $new_file_folders = self::$default_options['tfi_file_folders'];
+        $default_parent_folder = array_key_first( $new_file_folders );
+        foreach ( $file_folders as $file_folder_slug => $file_folder ) {
+            if ( isset( $file_folder['display_name'] ) ) {
+                $sanitize_file_folder_name = filter_var( $file_folder['display_name'], FILTER_SANITIZE_STRING );
+                $sanitize_file_folder_slug = $this->create_slug_from_string( $sanitize_file_folder_name );
+                $sanitize_file_folder_parent = $default_parent_folder;
+
+                if ( isset( $file_folder['parent'] ) ) {
+                    $sanitize_file_folder_parent = filter_var( $file_folder['parent'], FILTER_SANITIZE_STRING );
+                }
+                
+                if ( ! array_key_exists( $sanitize_file_folder_slug, $new_file_folders ) && ! empty( $sanitize_file_folder_slug ) ) {
+                    $new_file_folders[$sanitize_file_folder_slug]['display_name'] = $sanitize_file_folder_name;
+                    $new_file_folders[$sanitize_file_folder_slug]['parent'] = $sanitize_file_folder_parent;
+                }
+            }
+        }
+        
+        /**
+         * Verification at the end, if every folders have a valid parent.
+         * Obviously, the parent should be different that himself
+         */
+        foreach ( $new_file_folders as $new_file_folder_slug => $new_file_folder_datas ) {
+            $parent_slug = $new_file_folder_datas['parent'];
+            if ( ! array_key_exists( $parent_slug, $new_file_folders ) || $parent_slug === $new_file_folder_slug ) {
+                $new_file_folder_datas['parent'] = $default_parent_folder;
+            }
+        }
+
+        return $new_file_folders;
+    }
+
+    /**
      * Verify_fields.
      * 
      * @since 1.1.0
@@ -283,6 +337,20 @@ class OptionsManager {
                 }
             }
 
+            /**
+             * Files special params
+             */
+            if ( $sanitize_field_value['type'] === 'image' ) {
+                $file_folders = tfi_get_option( 'tfi_file_folders' );
+                $sanitize_field_value['folder'] = array_key_first( $file_folders );
+                if ( isset( $field_value['folder'] ) && array_key_exists( $field_value['folder'], $file_folders ) ) {
+                    $sanitize_field_value['folder'] = $field_value['folder'];
+                }
+            }
+
+            /**
+             * Image special params
+             */
             if ( $sanitize_field_value['type'] === 'image' ) {
                 $sanitize_field_value['special_params']['height'] = 20;
                 $sanitize_field_value['special_params']['width'] = 20;
@@ -294,6 +362,9 @@ class OptionsManager {
                     $sanitize_field_value['special_params']['width'] = floor( abs( $field_value['special_params']['width'] ) );
                 }
             }
+            /**
+             * Link special params
+             */
             else if ( $sanitize_field_value['type'] === 'link' ) {
                 $sanitize_field_value['special_params']['mandatory_domains'] = array();
 

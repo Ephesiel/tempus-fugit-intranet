@@ -88,15 +88,18 @@ function tfi_hide_first_row_button() {
  */
 function tfi_change_type_param(field_type_select) {
     let type        = field_type_select.value;
-    let param_row   = document.getElementById(field_type_select.getAttribute("param-row"));
+    let params_row   = document.getElementsByClassName(field_type_select.getAttribute("param-row"));
+    console.log( params_row );
 
-    Array.from(param_row.getElementsByClassName("special-param-wrapper")).forEach(function(element) {
-        if (element.getAttribute("field-type") == type) {
-            element.removeAttribute("hidden");
-        }
-        else {
-            element.setAttribute("hidden", true);
-        }
+    Array.from(params_row).forEach(function(param_row) {
+        Array.from(param_row.getElementsByClassName("special-param-wrapper")).forEach(function(element) {
+            if (element.getAttribute("field-type") == type) {
+                element.removeAttribute("hidden");
+            }
+            else {
+                element.setAttribute("hidden", true);
+            }
+        });
     });
 }
 

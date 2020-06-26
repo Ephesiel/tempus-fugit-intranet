@@ -77,6 +77,7 @@ class AdminPanelManager {
 			</form>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'tfi_users_fields' ); ?>
+				<?php do_settings_sections( 'folders' ); ?>
 				<?php do_settings_sections( 'fields' ); ?>
 				<?php do_settings_sections( 'users' ); ?>
 				<?php submit_button(); ?>
@@ -116,6 +117,12 @@ class AdminPanelManager {
 			'tfi_general_options',
 			'tfi_user_types',
 			array( $this, 'sanitize_user_types' )
+		);
+		
+		register_setting(
+			'tfi_users_fields',
+			'tfi_file_folders',
+			array( $this, 'sanitize_file_folders' )
 		);
 		
 		register_setting(
@@ -189,6 +196,13 @@ class AdminPanelManager {
 			array( $this, 'user_types_callback' ),
 			'general-user',
 			'general_user_options_id'
+		);
+
+		add_settings_section(
+			'folders_option_id',
+			__( 'File folders' ),
+			array( $this, 'display_folders_section' ),
+			'folders'
 		);
 
 		add_settings_section(
@@ -282,6 +296,20 @@ class AdminPanelManager {
 
 		$options_manager = new OptionsManager;
 		return $options_manager->verify_option( 'tfi_user_types', $option );
+	}
+
+	public function sanitize_file_folders( $input ) {
+		/**
+		 * This key is destroyed because it's only used in js
+		 */
+		if ( isset( $input['number_to_replace'] ) ) {
+            unset( $input['number_to_replace'] );
+        }
+        
+		require_once TFI_PATH . 'includes/options.php';
+
+		$options_manager = new OptionsManager;
+		return $options_manager->verify_option( 'tfi_file_folders', $input );
 	}
 	
 	/**
@@ -512,10 +540,61 @@ class AdminPanelManager {
 		<?php
 	}
 
+	public function display_folders_section() {
+		$folders = tfi_get_option( 'tfi_file_folders' );
+		?>
+		<table id="tfi-folders-table" class="tfi-options-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Name' ); ?></th>
+					<th><?php esc_html_e( 'Parent folder' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $folders as $folder_slug => $folder ): ?>
+				<tr id="tfi-field-<?php echo esc_attr( $folder_slug ); ?>">
+					<td><input type="text" name="tfi_file_folders[<?php echo esc_attr( $folder_slug ); ?>][display_name]" value="<?php esc_attr_e( $folder['display_name'] ); ?>" /></td>
+					<td>
+						<?php if ( $folder_slug != array_key_first( $folders ) ): ?>
+						<select name="tfi_file_folders[<?php echo esc_attr( $folder_slug ); ?>][parent]">
+							<?php foreach ( $folders as $select_folder_slug => $select_folder ):
+							if ( $select_folder_slug != $select_folder ): ?>
+							<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo $select_folder_slug == $folder['parent'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+							<?php endif;
+							endforeach; ?>
+						</select>
+						<?php endif; ?>
+					</td>
+					<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-field-<?php echo esc_attr( $folder_slug ); ?>')" class="button action"><?php esc_html_e( 'Remove folder' ); ?></button></td>
+				</tr>
+				<?php endforeach;
+				/**
+				 * This last row allows to add a new folder by pressing the Add folder button.
+				 * It should be deleted from the input array before verification (in the sanitize method)
+				 */
+				?>
+				<tr hidden>
+					<td><input type="text" name="tfi_file_folders[number_to_replace][display_name]" value="" /></td>
+					<td>
+						<select name="tfi_file_folders[number_to_replace][parent]">
+							<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
+							<option value="<?php echo esc_attr( $select_folder_slug ); ?>"><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+							<?php endforeach; ?>
+						</select>	
+					</td>
+					<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-folder-number_to_replace')" class="button action"><?php esc_html_e( 'Remove folder' ); ?></button></td>
+				</tr>
+			</tbody>
+			<tr><td><button type="button" onclick="tfi_add_row('tfi-folders-table', 'tfi-folder-', 'number_to_replace')" class="button action"><?php esc_html_e( 'Add a folder' ); ?></button></td></tr>
+		</table>
+		<?php
+	}
+
 	public function display_fields_section() {
 		$user_types = tfi_get_option( 'tfi_user_types' );
 		$field_types = tfi_get_option( 'tfi_field_types' );
 		$fields = tfi_get_option( 'tfi_fields' );
+		$folders = tfi_get_option( 'tfi_file_folders' );
 		?>
 		<table id="tfi-fields-table" class="tfi-options-table">
 			<thead>
@@ -525,6 +604,7 @@ class AdminPanelManager {
 					<th><?php esc_html_e( 'Type' ); ?></th>
 					<th><?php esc_html_e( 'Default value' ); ?></th>
 					<th><?php esc_html_e( 'Parameters' ); ?></th>
+					<th><?php esc_html_e( 'Folder to save' ); ?></th>
 					<?php foreach ( $user_types as $id => $name ): ?>
 					<th><?php esc_html_e( $name ); ?></th>
 					<?php endforeach; ?>
@@ -545,26 +625,35 @@ class AdminPanelManager {
 						</select>	
 					</td>
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
-					<td class="param-fields" id="param-fields-<?php echo esc_attr( $id ); ?>">
-                        <div hidden class="special-param-wrapper" field-type="image">
-                            <label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
-                            <input  type="number"
-                                    name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]"
-                                    value="<?php echo isset( $datas['special_params']['height'] ) ? esc_attr( $datas['special_params']['height'] ) : 0; ?>" />
-                        </div>
-                        <div hidden class="special-param-wrapper" field-type="image">
-                            <label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
-                            <input  type="number"
-                                    name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]"
-                                    value="<?php echo isset( $datas['special_params']['width'] ) ? esc_attr( $datas['special_params']['width'] ) : 0; ?>" />
-                        </div>
-                        <div hidden class="special-param-wrapper" field-type="link">
-                            <label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
-                            <input  type="text"
-                                    name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][mandatory_domains]"
-                                    value="<?php echo isset( $datas['special_params']['mandatory_domains'] ) ? esc_attr( implode( ',', $datas['special_params']['mandatory_domains'] ) ) : ''; ?>"
-                                    placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
-                        </div>
+					<td class="param-fields-<?php echo esc_attr( $id ); ?> param-fields">
+						<div hidden class="special-param-wrapper" field-type="image">
+							<label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]"
+									value="<?php echo isset( $datas['special_params']['height'] ) ? esc_attr( $datas['special_params']['height'] ) : 0; ?>" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="image">
+							<label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]"
+									value="<?php echo isset( $datas['special_params']['width'] ) ? esc_attr( $datas['special_params']['width'] ) : 0; ?>" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="link">
+							<label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
+							<input  type="text"
+									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][mandatory_domains]"
+									value="<?php echo isset( $datas['special_params']['mandatory_domains'] ) ? esc_attr( implode( ',', $datas['special_params']['mandatory_domains'] ) ) : ''; ?>"
+									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
+						</div>
+					</td>
+					<td class="param-fields-<?php echo esc_attr( $id ); ?>">
+						<div hidden class="special-param-wrapper" field-type="image">
+							<select name="tfi_fields[<?php echo esc_attr( $id ); ?>][folder]">
+								<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
+								<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo isset( $datas['folder'] ) && $select_folder_slug == $datas['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
 					</td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
 					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[<?php echo esc_attr( $id ); ?>][users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'] ) ? 'checked ' : ''; ?>/></td>
@@ -579,7 +668,7 @@ class AdminPanelManager {
 				 * It should be deleted from the input array before verification (in the sanitize method)
 				 */
 				?>
-				<tr id="tfi-field-new" hidden>
+				<tr hidden>
 					<td><input type="text" name="tfi_fields[number_to_replace][id]" value="<?php esc_attr_e( 'field_name' ); ?>" /></td>
 					<td><input type="text" name="tfi_fields[number_to_replace][real_name]" value="<?php esc_attr_e( 'My field name' ); ?>" /></td>
 					<td>
@@ -590,26 +679,33 @@ class AdminPanelManager {
 						</select>	
 					</td>
 					<td><input type="text" name="tfi_fields[number_to_replace][default]" value="" /></td>
-					<td class="param-fields" id="param-fields-number_to_replace">
-                        <div hidden class="special-param-wrapper" field-type="image">
-                            <label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
-                            <input  type="number"
-                                    name="tfi_fields[number_to_replace][special_params][height]"
-                                    value="0" />
-                        </div>
-                        <div hidden class="special-param-wrapper" field-type="image">
-                            <label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
-                            <input  type="number"
-                                    name="tfi_fields[number_to_replace][special_params][width]"
-                                    value="0" />
-                        </div>
-                        <div hidden class="special-param-wrapper" field-type="link">
-                            <label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
-                            <input  type="text"
-                                    name="tfi_fields[number_to_replace][special_params][mandatory_domains]"
-                                    value=""
-                                    placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
-                        </div>
+					<td class="param-fields param-fields-number_to_replace" >
+						<div hidden class="special-param-wrapper" field-type="image">
+							<label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[number_to_replace][special_params][height]"
+									value="0" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="image">
+							<label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[number_to_replace][special_params][width]"
+									value="0" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="link">
+							<label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
+							<input  type="text"
+									name="tfi_fields[number_to_replace][special_params][mandatory_domains]"
+									value=""
+									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
+						</div>
+					</td>
+					<td>
+						<select name="tfi_fields[number_to_replace][folder]">
+							<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
+							<option value="<?php echo esc_attr( $select_folder_slug ); ?>"><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+							<?php endforeach; ?>
+						</select>
 					</td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
 					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[number_to_replace][users][<?php echo esc_attr( $type_id ); ?>]" /></td>

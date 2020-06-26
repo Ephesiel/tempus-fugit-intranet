@@ -65,6 +65,7 @@ if ( ! function_exists( 'tfi_get_option' ) ) {
         switch ( $option_name ) {
             case 'tfi_fields':
             case 'tfi_users':
+            case 'tfi_file_folders':
             case 'tfi_field_types':
             case 'tfi_user_types':
                 $default = array();
