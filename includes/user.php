@@ -291,7 +291,8 @@ class User {
             }
         }
 
-        if ( ! empty( array_diff_assoc( $to_send, $witness ) ) ) {
+        $changes = array_diff_assoc( $to_send, $witness );
+        if ( ! empty( $changes ) ) {
             global $wpdb;
             
             $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $to_send ) ), array( 'user_id' => $this->id ), null, '%d' );
@@ -302,6 +303,25 @@ class User {
 
             // The datas changed
             $this->user_datas['user_db_datas'] = $to_send;
+
+            $changed_fields;
+            $values;
+
+            foreach ( $changes as $field_name => $change ) {
+                $changed_fields[$field_name]    = $this->allowed_fields()[$field_name];
+                $values[$field_name]            = $this->get_value_for_field($field_name);
+            }
+
+            /**
+             * When user datas has been changed, a filter is applying to allow post process
+             * 
+             * @param int   $this->id           L'identifiant de l'utilisateur dont les datas ont été modifiées
+             * @param array $changed_fields     All Field objects which changed, keys are field_slug
+             * @param array $values             Values to display in html or to know the exact link for certain fields
+             * 
+             * @since 1.2.0
+             */
+            apply_filters( 'tfi_user_datas_change', $this->id, $changed_fields, $values );
         }
 
         return $result;

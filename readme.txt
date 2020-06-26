@@ -32,6 +32,9 @@ Intranet to allow every students to add their own datas at home whitout passing 
 = 1.1.5 =
 * The resize has been corrected and add gif support and fatal errors on  the user form
 
+= 1.2.0 =
+* Add the filter which allows to get new datas of a user, once send into database. 
+
 == How to use ==
 
 = After installation =
@@ -81,6 +84,12 @@ This shortcode can have some attributes :
 
 If user_id is set, the user_slug is useless
 If neither user_id or user_slug are set, the user will be the current one (it means the user which is on the site or nothing happend if he is not register)
+
+= Filters =
+You can use one filter calls 'tfi_user_datas_change' which accept 3 arguments.
+* The first is the id of the user which changed his data.
+* The second is an array of all fields which changed, with all their options.
+* The third is an array of all values for each fields.
 
 = Other points =
 * The upload max size of a file is, by default, 2 Mb on most wordpress site. So to allow higher image size, you need to change your server configuration about upload file max size.
