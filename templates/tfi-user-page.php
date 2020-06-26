@@ -30,8 +30,6 @@ $redirect_url = get_home_url();
         <div id="tfi-user-page-content">
         <?php
         global $post;
-        $post_id = get_page( tfi_get_option( 'tfi_user_page_id' ) );
-        $post = get_post( $post_id );
         setup_postdata( $post );
         the_content();
         wp_reset_postdata( $post );
