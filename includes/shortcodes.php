@@ -118,9 +118,15 @@ class ShortcodesManager {
      * It display the form with all fields concerning the actual user
      * 
      * Attributes :
-     *      -   preview => bool => if you want to have a previzualisation of all fields
+     *      -   preview => bool     => If you want to have a previzualisation of all fields
+     *      -   fields  => string   => Fields to display in the form, separate by comma.
+     *      -   prefixs => string   => Prefixs separate by comma. all fields which begin by one of those prefix will be display on the form.
+     *      -   suffixs => string   => Same ad 'prefixs' but with suffixs
+     * 
+     * If none of the three last arguments are set, all fields will be displayed
      * 
      * @since 1.0.0
+     * @since 1.2.0     Add arguments to display special fields
      * @access public
      */
     public function display_user_form( $atts = array(), $content = null, $tag = '' ) {
@@ -137,9 +143,39 @@ class ShortcodesManager {
             $output .= $this->get_error( 'fatal' );
         }
 
+        $user_fields = $this->user->allowed_fields();
+
+        if ( array_key_exists( 'fields', $atts ) || array_key_exists( 'prefixs', $atts ) || array_key_exists( 'suffixs', $atts ) ) {
+            $fields = array_key_exists( 'fields', $atts ) ? explode( ',', $atts['fields'] ) : array();
+            $prefixs = array_key_exists( 'prefixs', $atts ) ? explode( ',', $atts['prefixs'] ) : array();
+            $suffixs = array_key_exists( 'suffixs', $atts ) ? explode( ',', $atts['suffixs'] ) : array();
+
+            $witness = $user_fields;
+            $user_fields = array();
+
+            foreach ( $witness as $field_slug => $field_value ) {
+                if ( in_array( $field_slug, $fields ) ) {
+                    $user_fields[$field_slug] = $field_value;
+                    continue;
+                }
+                foreach ( $prefixs as $prefix ) {
+                    if ( strpos( $field_slug, $prefix ) === 0 ) {
+                        $user_fields[$field_slug] = $field_value;
+                        break;
+                    }
+                }
+                foreach ( $suffixs as $suffix ) {
+                    if ( strrpos( $field_slug, $suffix ) === strlen( $field_slug ) - strlen( $suffix ) ) {
+                        $user_fields[$field_slug] = $field_value;
+                        break;
+                    }
+                }
+            }
+        }
+
         $output .= '<form class="tfi-user-form" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" enctype="multipart/form-data" method="POST">';
         $output .=      '<table class="form-table">';
-        foreach ( $this->user->allowed_fields() as $field ) {
+        foreach ( $user_fields as $field ) {
             $output .= $this->add_field( $field, $atts );
         }
         $output .=          '<tr><td><input type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '"></td></tr>';
