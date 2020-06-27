@@ -618,7 +618,7 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][id]" value="<?php echo esc_attr( $id ); ?>" /></td>
 					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][real_name]" value="<?php esc_attr_e( $datas['real_name'] ); ?>" /></td>
 					<td>
-						<select class="field-type-select" name="tfi_fields[<?php echo esc_attr( $id ); ?>][type]" param-row="param-fields-<?php echo esc_attr( $id ); ?>">
+						<select onchange="tfi_change_type_param(this)" class="field-type-select" name="tfi_fields[<?php echo esc_attr( $id ); ?>][type]" param-row="param-fields-<?php echo esc_attr( $id ); ?>">
 							<?php foreach ( $field_types as $type_id => $param ): ?>
 							<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['type'] ? 'selected' : ''; ?>><?php esc_html_e( $param['display_name'] ); ?></option>
 							<?php endforeach; ?>
@@ -672,7 +672,7 @@ class AdminPanelManager {
 					<td><input type="text" name="tfi_fields[number_to_replace][id]" value="<?php esc_attr_e( 'field_name' ); ?>" /></td>
 					<td><input type="text" name="tfi_fields[number_to_replace][real_name]" value="<?php esc_attr_e( 'My field name' ); ?>" /></td>
 					<td>
-						<select class="field-type-select" name="tfi_fields[number_to_replace][type]" param-row="param-fields-number_to_replace">
+						<select onchange="tfi_change_type_param(this)" class="field-type-select" name="tfi_fields[number_to_replace][type]" param-row="param-fields-number_to_replace">
 							<?php foreach ( $field_types as $type_id => $param ): ?>
 							<option value="<?php echo esc_attr( $type_id ); ?>"><?php esc_html_e( $param['display_name'] ); ?></option>
 							<?php endforeach; ?>
@@ -700,12 +700,14 @@ class AdminPanelManager {
 									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
 						</div>
 					</td>
-					<td>
-						<select name="tfi_fields[number_to_replace][folder]">
-							<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
-							<option value="<?php echo esc_attr( $select_folder_slug ); ?>"><?php esc_html_e( $select_folder['display_name'] ); ?></option>
-							<?php endforeach; ?>
-						</select>
+					<td class="param-fields-number_to_replace">
+                        <div hidden class="special-param-wrapper" field-type="image">
+                            <select name="tfi_fields[number_to_replace][folder]">
+                                <?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
+                                <option value="<?php echo esc_attr( $select_folder_slug ); ?>"><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+						</div>
 					</td>
 					<?php foreach ( $user_types as $type_id => $name ): ?>
 					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[number_to_replace][users][<?php echo esc_attr( $type_id ); ?>]" /></td>

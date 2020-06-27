@@ -107,9 +107,6 @@ window.addEventListener("DOMContentLoaded", function(event) {
     tfi_hide_first_row_button();
 
     Array.from(document.getElementsByClassName("field-type-select")).forEach(function(element) {
-        element.addEventListener("change", function(event) {
-            tfi_change_type_param( event.target );
-        });
         tfi_change_type_param(element);
     });
 });
