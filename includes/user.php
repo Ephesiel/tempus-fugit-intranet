@@ -403,14 +403,14 @@ class User {
                         require_once TFI_PATH . 'utilities/resize-image.php';
 
                         $resize_image = new ResizeImage( $file['tmp_name'] );
-                        $resize_image->resize_to(  $field->special_params['width'],  $field->special_params['height'] );
+                        $resize_image->resize_to( $field->special_params['width'],  $field->special_params['height'] );
                         $resize_image->save_image( $file['tmp_name'] );
                     }
                     else {
                         require_once TFI_PATH . 'utilities/resize-gif.php';
 
                         $resize_gif = new ResizeGif( $file['tmp_name'] );
-                        $resize_gif->resize_to(  $field->special_params['width'],  $field->special_params['height'] );
+                        $resize_gif->resize_to( $field->special_params['width'],  $field->special_params['height'] );
                         $resize_gif->save_image( $file['tmp_name'] );
                     }
                 }
@@ -432,9 +432,19 @@ class User {
             throw new \Exception( 'Impossible to find the upload directory.' );
         }
 
+        // Emplacement inside the user folder to save the file
+        $subdirs        = '';
+        $subdir         = $field->special_params['folder'];
+        $all_folders    = tfi_get_option( 'tfi_file_folders' );
+
+        while ( $all_folders[$subdir]['parent'] !== '' ) {
+            $subdirs = '/' .$subdir . $subdirs;
+            $subdir = $all_folders[$subdir]['parent'];
+        }
+
         // The id is used to be sure that the dirname is unique.
-        $user_dirname   = $user->user_nicename . '-' . $user->ID;
-        $dirname        = TFI_UPLOAD_FOLDER_DIR . '/' . $user_dirname;
+        $filepath   = $user->user_nicename . '-' . $user->ID . $subdirs;
+        $dirname    = TFI_UPLOAD_FOLDER_DIR . '/' . $filepath;
 
         if ( ! file_exists( $dirname ) ) {
             wp_mkdir_p( $dirname );
@@ -453,7 +463,7 @@ class User {
         }
 
         // Store the path name (without the plugin directory to be able to reuse the path if we change it)
-        return $user_dirname . '/' . $filename;
+        return $filepath . '/' . $filename;
     }
 
     /**

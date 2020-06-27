@@ -37,8 +37,8 @@ class OptionsManager {
             'default_type' => 'Default type'
         ),
         'tfi_file_folders' => array(
-            'tempus_fugit_intranet_files' => array(
-                'display_name' => 'Tempus Fugit Intranet Files',
+            'user_folder' => array(
+                'display_name' => 'User folder',
                 'parent' => ''
             )
         ),
@@ -246,9 +246,9 @@ class OptionsManager {
     }
 
     /**
-     * Verify_user_types.
+     * Verify_file_folders.
      * 
-     * @since 1.1.0
+     * @since 1.2.0
      * @access private
      * 
      * @param array $file_folders   contains all folder paths to verify for the option tfi_file_folders
@@ -342,9 +342,9 @@ class OptionsManager {
              */
             if ( $sanitize_field_value['type'] === 'image' ) {
                 $file_folders = tfi_get_option( 'tfi_file_folders' );
-                $sanitize_field_value['folder'] = array_key_first( $file_folders );
-                if ( isset( $field_value['folder'] ) && array_key_exists( $field_value['folder'], $file_folders ) ) {
-                    $sanitize_field_value['folder'] = $field_value['folder'];
+                $sanitize_field_value['special_params']['folder'] = array_key_first( $file_folders );
+                if ( isset( $field_value['special_params']['folder'] ) && array_key_exists( $field_value['special_params']['folder'], $file_folders ) ) {
+                    $sanitize_field_value['special_params']['folder'] = $field_value['special_params']['folder'];
                 }
             }
 

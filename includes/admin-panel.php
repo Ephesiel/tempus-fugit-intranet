@@ -648,9 +648,9 @@ class AdminPanelManager {
 					</td>
 					<td class="param-fields-<?php echo esc_attr( $id ); ?>">
 						<div hidden class="special-param-wrapper" field-type="image">
-							<select name="tfi_fields[<?php echo esc_attr( $id ); ?>][folder]">
+							<select name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][folder]">
 								<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
-								<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo isset( $datas['folder'] ) && $select_folder_slug == $datas['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+								<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo isset( $datas['special_params']['folder'] ) && $select_folder_slug == $datas['special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</div>
@@ -702,7 +702,7 @@ class AdminPanelManager {
 					</td>
 					<td class="param-fields-number_to_replace">
                         <div hidden class="special-param-wrapper" field-type="image">
-                            <select name="tfi_fields[number_to_replace][folder]">
+                            <select name="tfi_fields[number_to_replace][special_params][folder]">
                                 <?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
                                 <option value="<?php echo esc_attr( $select_folder_slug ); ?>"><?php esc_html_e( $select_folder['display_name'] ); ?></option>
                                 <?php endforeach; ?>
