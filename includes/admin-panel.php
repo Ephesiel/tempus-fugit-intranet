@@ -480,8 +480,9 @@ class AdminPanelManager {
 	 * 
 	 * You need to know some rules to this :
 	 * - You should avoid changing folder path of fields where a lot of files or big ones have been set
-	 * - You can delete a field and recreate it, the path has been set into database so it's okay.
-	 * - Because this plugin keep a cache. If you change the type of a field and a user modify it, the file wont' be deleted, ever ! 
+	 * - Because this plugin keep a cache. If you change the type of a field and a user modify it, the file wont' be deleted, ever !
+	 * - If you changed the field type and changing it again, the file will be deleted when the user will modify it. Until that, the path is kept.
+	 * - Remind that folder are never destroyed, even if you remove them form the list. So you can have empty folders in your uploads dir. 
 	 * 
 	 * @since 1.2.0
 	 * @access public
@@ -501,40 +502,47 @@ class AdminPanelManager {
 		$changed_fields = array();
 
 		foreach ( $new_fields as $field_slug => $field_datas ) {
-			if ( $field_datas['type'] === 'image' ) {
-				if ( ! array_key_exists( $field_slug, $old_fields ) ||
-				   ( $old_fields[$field_slug]['type'] === 'image' && $field_datas['special_params']['folder'] !== $old_fields[$field_slug]['special_params']['folder'] ) ) {
-					foreach ( tfi_get_users_which_have_field( $field_slug ) as $wp_user ) {
-						$user;
-						if ( array_key_exists( $wp_user->ID, $changed_users ) ) {
-							$user = $changed_users[$wp_user->ID];
-						}
-						else {
-							$user = new User( $wp_user->ID );
-						}
-
-						$old_path 	= $user->get_value_for_field( $field_slug, false );
-						$filename 	= basename( $old_path );
-						/**
-						 * The upload dir is the directory where values are saved in database, it means the directory inside the TFI_UPLOAD_FOLDER_DIR
-						 * The local dir is the absolute path, we use it to rename the file later
-						 */
-						$upload_dir	= tfi_get_user_file_folder_path( $wp_user->ID, $field_datas['special_params']['folder'], false );
-						$local_dir  = TFI_UPLOAD_FOLDER_DIR . '/' . $upload_dir;
-						$new_value 	= $upload_dir . '/' . $filename;
-						$new_path	= $local_dir . '/' . $filename;
-
-						if ( ! file_exists( $local_dir ) ) {
-							wp_mkdir_p( $local_dir );
-						}
-
-						$changed_users[$user->id] = $user;
-						$changed_fields[$user->id][$field_slug] = array(
-							'old' => $old_path,
-							'new' => $new_path,
-							'new_value' => $new_value
-						);
+			/**
+			 * The path is changed only if the last AND new datas are files.
+			 * In other cases, the path will be changed when users will update their datas 
+			 */
+			if ( array_key_exists( $field_slug, $old_fields )
+				&& $field_datas['type'] === 'image' && $old_fields[$field_slug]['type'] === 'image'
+			    && $field_datas['special_params']['folder'] !== $old_fields[$field_slug]['special_params']['folder'] ) {
+				foreach ( tfi_get_users_which_have_field( $field_slug ) as $wp_user ) {
+					$user;
+					if ( array_key_exists( $wp_user->ID, $changed_users ) ) {
+						$user = $changed_users[$wp_user->ID];
 					}
+					else {
+						$user = new User( $wp_user->ID );
+					}
+
+					$old_path 	= $user->get_value_for_field( $field_slug, false );
+					if ( ! file_exists( $old_path ) ) {
+						continue;
+					}
+
+					$filename 	= basename( $old_path );
+					/**
+					 * The upload dir is the directory where values are saved in database, it means the directory inside the TFI_UPLOAD_FOLDER_DIR
+					 * The local dir is the absolute path, we use it to rename the file later
+					 */
+					$upload_dir	= tfi_get_user_file_folder_path( $wp_user->ID, $field_datas['special_params']['folder'], false );
+					$local_dir  = TFI_UPLOAD_FOLDER_DIR . '/' . $upload_dir;
+					$new_value 	= $upload_dir . '/' . $filename;
+					$new_path	= $local_dir . '/' . $filename;
+
+					if ( ! file_exists( $local_dir ) ) {
+						wp_mkdir_p( $local_dir );
+					}
+
+					$changed_users[$user->id] = $user;
+					$changed_fields[$user->id][$field_slug] = array(
+						'old' => $old_path,
+						'new' => $new_path,
+						'new_value' => $new_value
+					);
 				}
 			}
 		}
