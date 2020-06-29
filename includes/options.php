@@ -19,6 +19,7 @@ class OptionsManager {
      * 
      * @since 1.1.0
      * @since 1.3.0     Add tfi_file_folders option
+     * @since 1.2.1     Add number and color field types
      * 
      * @static
      * @access private
@@ -56,6 +57,17 @@ class OptionsManager {
             ),
             'text' => array(
                 'display_name' => 'Text',
+                'special_params' => array()
+            ),
+            'number' => array(
+                'display_name' => 'Number',
+                'special_params' => array(
+                    'min',
+                    'max'
+                )
+            ),
+            'color' => array(
+                'display_name' => 'Color',
                 'special_params' => array()
             )
         ),
@@ -309,6 +321,7 @@ class OptionsManager {
      * Verify_fields.
      * 
      * @since 1.1.0
+     * @since 1.2.1             Add number type verification
      * @access private
      * 
      * @param array $fields     contains all fields to verify for the option tfi_fields
@@ -365,8 +378,8 @@ class OptionsManager {
              * Image special params
              */
             if ( $sanitize_field_value['type'] === 'image' ) {
-                $sanitize_field_value['special_params']['height'] = 20;
-                $sanitize_field_value['special_params']['width'] = 20;
+                $sanitize_field_value['special_params']['height'] = 0;
+                $sanitize_field_value['special_params']['width'] = 0;
 
                 if ( isset( $field_value['special_params']['height'] ) && is_numeric( $field_value['special_params']['height'] ) ) {
                     $sanitize_field_value['special_params']['height'] = floor( abs( $field_value['special_params']['height'] ) );
@@ -387,6 +400,20 @@ class OptionsManager {
                             $sanitize_field_value['special_params']['mandatory_domains'][] = $domain_name;
                         }
                     }
+                }
+            }
+            /**
+             * Number special params
+             */
+            else if ( $sanitize_field_value['type'] === 'number' ) {
+                $sanitize_field_value['special_params']['min'] = 0;
+                $sanitize_field_value['special_params']['max'] = -1;
+
+                if ( isset( $field_value['special_params']['min'] ) && is_numeric( $field_value['special_params']['min'] ) ) {
+                    $sanitize_field_value['special_params']['min'] = $field_value['special_params']['min'];
+                }
+                if ( isset( $field_value['special_params']['max'] ) && is_numeric( $field_value['special_params']['max'] ) ) {
+                    $sanitize_field_value['special_params']['max'] = $field_value['special_params']['max'];
                 }
             }
 
@@ -482,6 +509,6 @@ class OptionsManager {
      * @return string           $string as a slug 
      */
     private function create_slug_from_string( $string ) {
-        return preg_replace( '/[^a-z0-9_]/', '', str_replace( ' ', '_', strtolower( $string ) ) );
+        return preg_replace( '/[^a-z0-9_-]/', '', str_replace( ' ', '_', strtolower( $string ) ) );
     }
 }

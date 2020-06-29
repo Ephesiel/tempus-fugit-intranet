@@ -232,9 +232,7 @@ class User {
             return false;
         }
 
-        // We get the older datas (because it is possible to have cache data)
-        // See AdminPanelmanager::update_users_datas to have more details
-        $to_send = $this->user_db_datas();
+        $to_send = array();
         $result = array();
 
         foreach ( $this->allowed_fields() as $field ) {
@@ -272,6 +270,23 @@ class User {
                         }
                         else {
                             $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a link' );
+                        }
+                    break;
+                    case 'number':
+                        $sanitize = filter_var( $datas[$field->name], FILTER_SANITIZE_NUMBER_INT );
+                        if ( ! empty( $sanitize ) ) {
+                            $success = true;
+
+                            if ( $field->special_params['min'] > $field->special_params['max'] || ( $sanitize >= $field->special_params['min'] && $sanitize <= $field->special_params['max'] ) ) {
+                                $to_send[$field->name] = $sanitize;
+                                $result[$field->name]  = true;
+                            }
+                            else {
+                                $result[$field->name]['tfi-error'][] = sprintf( __( 'It should be >= %1$s and <= %2$s' ), $field->special_params['min'], $field->special_params['max'] );
+                            }
+                        }
+                        else {
+                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a number' );
                         }
                     break;
                     case 'image':
@@ -318,7 +333,7 @@ class User {
             return false;
         }
 
-        $datas = $this->user_db_datas();
+        $datas = array();
         
         foreach ( $new_datas as $field_slug => $field_value ) {
             if ( array_key_exists( $field_slug, $this->allowed_fields() ) ) {
@@ -497,48 +512,54 @@ class User {
      * Update_user_datas.
      * 
      * Update user data into database
+     * Datas send in this method should only be the datas which changed, not others.
      * 
      * @since 1.2.0     Refactorization
      * @access private
      * 
-     * @param array $datas_to_changed   All datas to send to database (including non changed datas) 
+     * @param array $datas_to_changed   All datas which have been changed. /!\ Datas should be verified BEFORE /!\ 
      * @return bool The result of the query
      * 
      * @global wpdb $wpdb               The database object to update the table
      */
     private function update_user_datas( $datas_to_changed ) {
-        $changes = array_diff_assoc( $datas_to_changed, $this->user_db_datas() );
-        if ( ! empty( $changes ) ) {
+        $old_user_datas = $this->user_db_datas();
+        $new_user_datas = array_merge( $old_user_datas, $datas_to_changed );
+        if ( ! empty( array_diff_assoc( $new_user_datas, $old_user_datas ) ) ) {
             global $wpdb;
             
-            $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $datas_to_changed ) ), array( 'user_id' => $this->id ), null, '%d' );
+            $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $new_user_datas ) ), array( 'user_id' => $this->id ), null, '%d' );
 
             if ( $db_result === false ) {
                 return false;
             }
 
             // The datas changed
-            $this->user_datas['user_db_datas'] = $datas_to_changed;
-
-            $changed_fields;
-            $values;
-
-            foreach ( $changes as $field_name => $change ) {
-                $changed_fields[$field_name]    = $this->allowed_fields()[$field_name];
-                $values[$field_name]            = $this->get_value_for_field($field_name);
-            }
-
-            /**
-             * When user datas has been changed, a filter is applying to allow post process
-             * 
-             * @param int   $this->id           The id of the user whom datas has been modified
-             * @param array $changed_fields     All Field objects which changed, keys are field_slug
-             * @param array $values             Values to display in html or to know the exact link for certain fields
-             * 
-             * @since 1.2.0
-             */
-            apply_filters( 'tfi_user_datas_changed', $this->id, $changed_fields, $values );
+            $this->user_datas['user_db_datas'] = $new_user_datas;
         }
+
+        /**
+         * Even if datas didn't changed in database, it is possible that files changes for example.
+         * So every datas send in this method will be send to the user_datas_changed hook
+         */
+        $changed_fields = array();
+        $values = array();
+
+        foreach ( $datas_to_changed as $field_name => $change ) {
+            $changed_fields[$field_name]    = $this->allowed_fields()[$field_name];
+            $values[$field_name]            = $this->get_value_for_field( $field_name );
+        }
+
+        /**
+         * When user datas has been changed, a filter is applying to allow post process
+         * 
+         * @param int   $this->id           The id of the user whom datas has been modified
+         * @param array $changed_fields     All Field objects which changed, keys are field_slug
+         * @param array $values             Values to display in html or to know the exact link for certain fields
+         * 
+         * @since 1.2.0
+         */
+        apply_filters( 'tfi_user_datas_changed', $this->id, $changed_fields, $values );
 
         return true;
     }

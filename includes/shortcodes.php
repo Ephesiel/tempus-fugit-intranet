@@ -305,6 +305,21 @@ class ShortcodesManager {
         return $o;
     }
 
+    private function add_field_number( $field, $field_form_name ) {
+        $o = '<input';
+        $o.=    ' type="number"';
+        $o.=    ' id="' . esc_attr( $field->name ) .'"';
+        $o.=    ' name="' . esc_attr( $field_form_name ) . '"';
+        $o.=    ' value="' . esc_attr( $this->user->get_value_for_field( $field->name ) ) . '"';
+        if ( $field->special_params['min'] < $field->special_params['max'] ) {
+        $o.=    ' min="' . esc_attr( $field->special_params['min'] ) . '"';
+        $o.=    ' max="' . esc_attr( $field->special_params['max'] ) . '"';
+        }
+        $o.= '/>';
+
+        return $o;
+    }
+
     private function preview_field_image( $field ) {
         $src = $this->user->get_value_for_field( $field->name );
 

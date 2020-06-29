@@ -746,6 +746,18 @@ class AdminPanelManager {
 									value="<?php echo isset( $datas['special_params']['mandatory_domains'] ) ? esc_attr( implode( ',', $datas['special_params']['mandatory_domains'] ) ) : ''; ?>"
 									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
 						</div>
+						<div hidden class="special-param-wrapper" field-type="number">
+							<label title="<?php esc_attr_e( 'The minimum number possible to choose (if min > max there is no min value)' ); ?>"><?php esc_html_e( 'm:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][min]"
+									value="<?php echo isset( $datas['special_params']['min'] ) ? esc_attr( $datas['special_params']['min'] ) : '0'; ?>" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="number">
+							<label title="<?php esc_attr_e( 'The maximum number possible to choose (if max < min there is no max value)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][max]"
+									value="<?php echo isset( $datas['special_params']['max'] ) ? esc_attr( $datas['special_params']['max'] ) : '-1'; ?>" />
+						</div>
 					</td>
 					<td class="param-fields-<?php echo esc_attr( $id ); ?>">
 						<div hidden class="special-param-wrapper" field-type="image">
@@ -799,6 +811,18 @@ class AdminPanelManager {
 									name="tfi_fields[number_to_replace][special_params][mandatory_domains]"
 									value=""
 									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="number">
+							<label title="<?php esc_attr_e( 'The minimum number possible to choose (if min > max there is no min value)' ); ?>"><?php esc_html_e( 'm:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[number_to_replace][special_params][min]"
+									value="0" />
+						</div>
+						<div hidden class="special-param-wrapper" field-type="number">
+							<label title="<?php esc_attr_e( 'The maximum number possible to choose (if max < min there is no max value)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
+							<input  type="number"
+									name="tfi_fields[number_to_replace][special_params][max]"
+									value="-1" />
 						</div>
 					</td>
 					<td class="param-fields-number_to_replace">
