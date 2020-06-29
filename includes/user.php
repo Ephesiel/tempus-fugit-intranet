@@ -441,9 +441,10 @@ class User {
             wp_mkdir_p( $dirname );
         }
 
-        // Delete every files with the same name (because the extension can change and we don't want 3 different files)
-        foreach ( glob( $dirname . '/' . $field->name . '.*' ) as $filename ) {
-            unlink( $filename ); 
+        // Delete the old version of the file.
+        $value = $this->get_value_for_field( $field->name, false );
+        if ( ! empty( $value ) ) {
+            unlink( $value ); 
         }
 
         $filename   = $field->name . '.' . $extension;

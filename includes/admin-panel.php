@@ -489,6 +489,9 @@ class AdminPanelManager {
 	 * @param array $new_fields contains The new values of tfi_users option
 	 */
 	public function update_file_folders( $old_fields, $new_fields ) {
+		if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
+			return false;
+		}
 
 		/**
 		 * The first array keep User object in mind
@@ -498,12 +501,9 @@ class AdminPanelManager {
 		$changed_fields = array();
 
 		foreach ( $new_fields as $field_slug => $field_datas ) {
-            if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
-                return false;
-			}
-			
-			if ( $field_datas['type'] == 'image' ) {
-				if ( ! array_key_exists( $field_slug, $old_fields ) || $field_datas['special_params']['folder'] !== $old_fields[$field_slug]['special_params']['folder'] ) {
+			if ( $field_datas['type'] === 'image' ) {
+				if ( ! array_key_exists( $field_slug, $old_fields ) ||
+				   ( $old_fields[$field_slug]['type'] === 'image' && $field_datas['special_params']['folder'] !== $old_fields[$field_slug]['special_params']['folder'] ) ) {
 					foreach ( tfi_get_users_which_have_field( $field_slug ) as $wp_user ) {
 						$user;
 						if ( array_key_exists( $wp_user->ID, $changed_users ) ) {
@@ -516,8 +516,8 @@ class AdminPanelManager {
 						$old_path 	= $user->get_value_for_field( $field_slug, false );
 						$filename 	= basename( $old_path );
 						/**
-						 * The upload dir is the directory here value are save uin database, it means the directory inside the TFI_UPLOAD_FOLDER_DIR
-						 * The local dir is the full path to rename the file
+						 * The upload dir is the directory where values are saved in database, it means the directory inside the TFI_UPLOAD_FOLDER_DIR
+						 * The local dir is the absolute path, we use it to rename the file later
 						 */
 						$upload_dir	= tfi_get_user_file_folder_path( $wp_user->ID, $field_datas['special_params']['folder'], false );
 						$local_dir  = TFI_UPLOAD_FOLDER_DIR . '/' . $upload_dir;
@@ -545,6 +545,9 @@ class AdminPanelManager {
 				$changed_datas[$field_slug] = $paths['new_value'];
 			}
 
+			/**
+			 * Rename the files only if the query succeed
+			 */
 			if ( $user->set_values_for_fields( $changed_datas ) ) {
 				foreach ( $changed_fields[$user->id] as $field_slug => $paths ) {
 					rename( $paths['old'], $paths['new'] );
