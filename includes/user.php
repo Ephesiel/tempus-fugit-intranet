@@ -18,11 +18,12 @@ class User {
      * User id
      * 
      * @since 1.0.0
-     * @access private
+     * @since 1.2.0 Access set to public
+     * @access public
      * 
      * @var int
      */
-    private $id;
+    public $id;
 
     /**
      * Is_allowed.
@@ -179,15 +180,19 @@ class User {
      * It will verify if the user can access to this field
      * Then, it will call user_db_datas and watch if the value exists on the array
      * If it isn't, return the default value
-     * If the field is a file, return the url to display (images...)
+     * If the field is a file, return the url to display (images...) (or the path since 1.2.0)
      * 
      * @since 1.0.0
+     * @since 1.2.0     Add $url param
      * @access public
-     * @param string $field_slug
-     * @return string
-     * @return false if not ok or if the field isn't allowed for this user
+     * 
+     * @param string    $field_slug
+     * @param bool      $url        If the field is a file, do you want the url or the directory link ? Default true
+     * 
+     * @return mixed    The value of the field
+     * @return false    If not ok or if the field isn't allowed for this user
      */
-    public function get_value_for_field( $field_slug ) {
+    public function get_value_for_field( $field_slug, $url = true ) {
         if ( ! $this->is_ok() || ! array_key_exists( $field_slug, $this->allowed_fields() ) ) {
             return false;
         }
@@ -204,7 +209,7 @@ class User {
         }
 
         if ( $field->is_file ) {
-            $value = $this->get_file_link( $value );
+            $value = $this->get_file_link( $value, $url );
         }
 
         return $value;
@@ -221,7 +226,6 @@ class User {
      * @param array $files all files to upload in the uploads folder. Default null
      * @return array errors or success on upload datas.
      * @return false if not ok or if datas sending failed
-     * @global wpdb     $wpdb           The database object to drop the table
      */
     public function send_new_datas( $datas, $files = null ) {
         if ( ! $this->is_ok() ) {
@@ -231,12 +235,11 @@ class User {
         // We get the older datas (because it is possible to have cache data)
         // See AdminPanelmanager::update_users_datas to have more details
         $to_send = $this->user_db_datas();
-        $witness = $to_send;
         $result = array();
 
         foreach ( $this->allowed_fields() as $field ) {
             if ( isset( $datas[$field->name] ) || isset( $files[$field->name] )  ) {
-                switch ($field->type) {
+                switch ( $field->type ) {
                     case 'text':
                         $sanitize = filter_var( stripslashes( $datas[$field->name] ), FILTER_SANITIZE_STRING );
                         if ( ! empty( $sanitize ) ) {
@@ -291,54 +294,61 @@ class User {
             }
         }
 
-        $changes = array_diff_assoc( $to_send, $witness );
-        if ( ! empty( $changes ) ) {
-            global $wpdb;
-            
-            $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $to_send ) ), array( 'user_id' => $this->id ), null, '%d' );
+        if ( $this->update_user_datas( $to_send ) ) {
+            return $result;
+        }
+        return false;
+    }
 
-            if ( $db_result === false ) {
-                return false;
-            }
-
-            // The datas changed
-            $this->user_datas['user_db_datas'] = $to_send;
-
-            $changed_fields;
-            $values;
-
-            foreach ( $changes as $field_name => $change ) {
-                $changed_fields[$field_name]    = $this->allowed_fields()[$field_name];
-                $values[$field_name]            = $this->get_value_for_field($field_name);
-            }
-
-            /**
-             * When user datas has been changed, a filter is applying to allow post process
-             * 
-             * @param int   $this->id           L'identifiant de l'utilisateur dont les datas ont été modifiées
-             * @param array $changed_fields     All Field objects which changed, keys are field_slug
-             * @param array $values             Values to display in html or to know the exact link for certain fields
-             * 
-             * @since 1.2.0
-             */
-            apply_filters( 'tfi_user_datas_change', $this->id, $changed_fields, $values );
+    /**
+     * Set_values_for_fields.
+     * 
+     * Set a value to the database for a user.
+     * The new value isn't sanitize !!!
+     * It will update the database for each calls !
+     * 
+     * @since 1.2.0
+     * 
+     * @param array     $new_datas    Contains names in keys and new values in values
+     * 
+     * @return bool     The success of the operation
+     */
+    public function set_values_for_fields( $new_datas ) {
+        if ( ! $this->is_ok() ) {
+            return false;
         }
 
-        return $result;
+        $datas = $this->user_db_datas();
+        
+        foreach ( $new_datas as $field_slug => $field_value ) {
+            if ( array_key_exists( $field_slug, $this->allowed_fields() ) ) {
+                $datas[$field_slug] = $field_value;
+            }
+        }
+
+        return $this->update_user_datas( $datas );
     }
 
     /**
      * Get_file_link.
      * 
-     * Rerurn the full url of a given path
+     * Return the full url of a given path
      * 
      * @since 1.0.0
-     * @param string $value file path stored in the database
-     * @return string the url of the file
+     * @since 1.2.0     Add $url param
+     * @access private
+     * 
+     * @param string    $value  File path stored in the database
+     * @param bool      $url    Do you want the url or the directory link ?
+     * 
+     * @return string the url (or dir) of the file
      */
-    private function get_file_link( $value ) {
-        if ( defined( 'TFI_UPLOAD_FOLDER_URL' ) && ! empty( $value ) ) {
+    private function get_file_link( $value, $url ) {
+        if ( $url && defined( 'TFI_UPLOAD_FOLDER_URL' ) && ! empty( $value ) ) {
             return TFI_UPLOAD_FOLDER_URL . '/' . $value;
+        }
+        if ( ! $url && defined( 'TFI_UPLOAD_FOLDER_DIR' ) && ! empty( $value ) ) {
+            return TFI_UPLOAD_FOLDER_DIR . '/' . $value;
         }
         return $value;
     }
@@ -420,30 +430,11 @@ class User {
             }
         }
 
-        $user = get_user_by( 'id', $this->id );
-        
-        if ( $user === false ) {
-            wp_die( __( 'Fatal error: you\'re not a register user' ) );
-        }
-
-        $upload_dir = wp_upload_dir();
-
         if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
             throw new \Exception( 'Impossible to find the upload directory.' );
         }
 
-        // Emplacement inside the user folder to save the file
-        $subdirs        = '';
-        $subdir         = $field->special_params['folder'];
-        $all_folders    = tfi_get_option( 'tfi_file_folders' );
-
-        while ( $all_folders[$subdir]['parent'] !== '' ) {
-            $subdirs = '/' .$subdir . $subdirs;
-            $subdir = $all_folders[$subdir]['parent'];
-        }
-
-        // The id is used to be sure that the dirname is unique.
-        $filepath   = $user->user_nicename . '-' . $user->ID . $subdirs;
+        $filepath   = tfi_get_user_file_folder_path( $this->id, $field->special_params['folder'], false );
         $dirname    = TFI_UPLOAD_FOLDER_DIR . '/' . $filepath;
 
         if ( ! file_exists( $dirname ) ) {
@@ -499,6 +490,56 @@ class User {
         }
 
         return $this->user_datas['user_db_datas'];
+    }
+
+    /**
+     * Update_user_datas.
+     * 
+     * Update user data into database
+     * 
+     * @since 1.2.0     Refactorization
+     * @access private
+     * 
+     * @param array $datas_to_changed   All datas to send to database (including non changed datas) 
+     * @return bool The result of the query
+     * 
+     * @global wpdb $wpdb               The database object to update the table
+     */
+    private function update_user_datas( $datas_to_changed ) {
+        $changes = array_diff_assoc( $datas_to_changed, $this->user_db_datas() );
+        if ( ! empty( $changes ) ) {
+            global $wpdb;
+            
+            $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $datas_to_changed ) ), array( 'user_id' => $this->id ), null, '%d' );
+
+            if ( $db_result === false ) {
+                return false;
+            }
+
+            // The datas changed
+            $this->user_datas['user_db_datas'] = $datas_to_changed;
+
+            $changed_fields;
+            $values;
+
+            foreach ( $changes as $field_name => $change ) {
+                $changed_fields[$field_name]    = $this->allowed_fields()[$field_name];
+                $values[$field_name]            = $this->get_value_for_field($field_name);
+            }
+
+            /**
+             * When user datas has been changed, a filter is applying to allow post process
+             * 
+             * @param int   $this->id           The id of the user whom datas has been modified
+             * @param array $changed_fields     All Field objects which changed, keys are field_slug
+             * @param array $values             Values to display in html or to know the exact link for certain fields
+             * 
+             * @since 1.2.0
+             */
+            apply_filters( 'tfi_user_datas_changed', $this->id, $changed_fields, $values );
+        }
+
+        return true;
     }
 }
 

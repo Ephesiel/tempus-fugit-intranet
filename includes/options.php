@@ -161,6 +161,19 @@ class OptionsManager {
     }
 
     /**
+     * Get_parent_file_folder_slug.
+     * 
+     * @since 1.2.0
+     * @access public
+     * @static
+     * 
+     * @return string the slug of the default upload folder
+     */
+    public static function get_parent_file_folder_slug() {
+        return array_key_first( self::$default_options['tfi_file_folders'] );
+    }
+
+    /**
      * Verify_shortcut.
      * 
      * @since 1.1.0

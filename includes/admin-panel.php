@@ -148,6 +148,12 @@ class AdminPanelManager {
 		add_action( 'update_option_tfi_users', array( $this, 'update_users_datas' ), 10, 2 );
 
 		/**
+		 * When tfi_fields change, the file folder can hav been changed
+		 * If this is the case, we move existing files to the new folder.
+		 */
+		add_action( 'update_option_tfi_fields', array( $this, 'update_file_folders' ), 10, 2 );
+
+		/**
 		 * All sections and subsections to display on the option page
 		 * 
 		 * @since 1.0.0
@@ -466,6 +472,87 @@ class AdminPanelManager {
 		}
 	}
 
+	/**
+	 * Update_file_folders.
+	 * 
+	 * This method is called when the tfi_fields option has been updated
+	 * It will move existing files to new set folders
+	 * 
+	 * You need to know some rules to this :
+	 * - You should avoid changing folder path of fields where a lot of files or big ones have been set
+	 * - You can delete a field and recreate it, the path has been set into database so it's okay.
+	 * - Because this plugin keep a cache. If you change the type of a field and a user modify it, the file wont' be deleted, ever ! 
+	 * 
+	 * @since 1.2.0
+	 * @access public
+	 * @param array $old_fields contains The old values of tfi_users option
+	 * @param array $new_fields contains The new values of tfi_users option
+	 */
+	public function update_file_folders( $old_fields, $new_fields ) {
+
+		/**
+		 * The first array keep User object in mind
+		 * The second keep fields to change for each user
+		 */
+		$changed_users = array();
+		$changed_fields = array();
+
+		foreach ( $new_fields as $field_slug => $field_datas ) {
+            if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
+                return false;
+			}
+			
+			if ( $field_datas['type'] == 'image' ) {
+				if ( ! array_key_exists( $field_slug, $old_fields ) || $field_datas['special_params']['folder'] !== $old_fields[$field_slug]['special_params']['folder'] ) {
+					foreach ( tfi_get_users_which_have_field( $field_slug ) as $wp_user ) {
+						$user;
+						if ( array_key_exists( $wp_user->ID, $changed_users ) ) {
+							$user = $changed_users[$wp_user->ID];
+						}
+						else {
+							$user = new User( $wp_user->ID );
+						}
+
+						$old_path 	= $user->get_value_for_field( $field_slug, false );
+						$filename 	= basename( $old_path );
+						/**
+						 * The upload dir is the directory here value are save uin database, it means the directory inside the TFI_UPLOAD_FOLDER_DIR
+						 * The local dir is the full path to rename the file
+						 */
+						$upload_dir	= tfi_get_user_file_folder_path( $wp_user->ID, $field_datas['special_params']['folder'], false );
+						$local_dir  = TFI_UPLOAD_FOLDER_DIR . '/' . $upload_dir;
+						$new_value 	= $upload_dir . '/' . $filename;
+						$new_path	= $local_dir . '/' . $filename;
+
+						if ( ! file_exists( $local_dir ) ) {
+							wp_mkdir_p( $local_dir );
+						}
+
+						$changed_users[$user->id] = $user;
+						$changed_fields[$user->id][$field_slug] = array(
+							'old' => $old_path,
+							'new' => $new_path,
+							'new_value' => $new_value
+						);
+					}
+				}
+			}
+		}
+
+		foreach ( $changed_users as $user ) {
+			$changed_datas = array();
+			foreach ( $changed_fields[$user->id] as $field_slug => $paths ) {
+				$changed_datas[$field_slug] = $paths['new_value'];
+			}
+
+			if ( $user->set_values_for_fields( $changed_datas ) ) {
+				foreach ( $changed_fields[$user->id] as $field_slug => $paths ) {
+					rename( $paths['old'], $paths['new'] );
+				}
+			}
+		}
+	}
+
     public function display_connection_form_section() {
 		?>
 		<p><?php esc_html_e( '' ); ?></p>
@@ -541,7 +628,10 @@ class AdminPanelManager {
 	}
 
 	public function display_folders_section() {
+		require_once TFI_PATH . 'includes/options.php';
+
 		$folders = tfi_get_option( 'tfi_file_folders' );
+		$default_folder_slug = OptionsManager::get_parent_file_folder_slug();
 		?>
 		<table id="tfi-folders-table" class="tfi-options-table">
 			<thead>
@@ -555,7 +645,7 @@ class AdminPanelManager {
 				<tr id="tfi-field-<?php echo esc_attr( $folder_slug ); ?>">
 					<td><input type="text" name="tfi_file_folders[<?php echo esc_attr( $folder_slug ); ?>][display_name]" value="<?php esc_attr_e( $folder['display_name'] ); ?>" /></td>
 					<td>
-						<?php if ( $folder_slug != array_key_first( $folders ) ): ?>
+						<?php if ( $folder_slug != $default_folder_slug ): ?>
 						<select name="tfi_file_folders[<?php echo esc_attr( $folder_slug ); ?>][parent]">
 							<?php foreach ( $folders as $select_folder_slug => $select_folder ):
 							if ( $select_folder_slug != $select_folder ): ?>

@@ -79,8 +79,6 @@ class UninstallManager {
      * @access private
      */
     private function delete_upload_dir() {
-        $upload_dir = wp_upload_dir();
-        
         if ( defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
             if ( file_exists( TFI_UPLOAD_FOLDER_DIR ) ) {
                 tfi_delete_files( TFI_UPLOAD_FOLDER_DIR );

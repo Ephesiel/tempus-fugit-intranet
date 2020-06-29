@@ -34,6 +34,7 @@ Intranet to allow every students to add their own datas at home whitout passing 
 
 = 1.2.0 =
 * Add the filter which allows to get new datas of a user, once send into database. 
+* Add files folders, to sort files inside the upload directory
 
 == How to use ==
 

@@ -195,3 +195,61 @@ if ( ! function_exists( 'tfi_remove_temp_folder' ) ) {
         }
     }
 }
+
+if ( ! function_exists( 'tfi_get_user_file_folder_path' ) ) {
+    /**
+     * Tfi_get_user_file_folder_path.
+     * 
+     * This method allows to get a user file folder path by giving an id and a slug.
+     * Return false if this is not possible to get the path of the wanted slug/user
+     * 
+     * @since 1.2.0
+     * 
+     * @param int           $user_id        The id of the user.
+     * @param string|null   $folder_slug    The slug of the folder to get. If you only want the user path, give null. Default null.
+     * @param bool          $absolute       If set to false, give the path form TFI_UPLOAD_FOLDER_DIR, if set to true, return an absolute path. Default true.
+     * 
+     * @return string       The wanted path (remind to check if the folder exists!)
+     * @return false        When an error occured (bad user_id, non existing slug...) and the path cannot be given
+     */
+    function tfi_get_user_file_folder_path( $user_id, $folder_slug = null, $absolute = true ) {
+        $user = get_user_by( 'id', $user_id );
+        if ( $user === false ) {
+            return false;
+        }
+
+        $subdirs = '';
+
+        if ( $folder_slug !== null ) {
+            require_once TFI_PATH . 'includes/options.php';
+
+            $subdir         = $folder_slug;
+            $all_folders    = tfi_get_option( 'tfi_file_folders' );
+            $parent_folder  = TFI\OptionsManager::get_parent_file_folder_slug();
+            
+            // We only need to verify the first, because options are sanitized
+            if ( ! array_key_exists( $subdir, $all_folders ) ) {
+                return false;
+            }
+    
+            while ( $subdir != $parent_folder ) {
+                $subdirs = '/' .$subdir . $subdirs;
+                $subdir = $all_folders[$subdir]['parent'];
+            }
+        }
+
+        // The id is used to be sure that the dirname is unique.
+        $user_dirname = $user->user_nicename . '-' . $user->ID . $subdirs;
+
+        if ( $absolute ) {
+            if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
+                return false;
+            }
+
+            return  TFI_UPLOAD_FOLDER_DIR . '/' . $user_dirname;
+        }
+        else {
+            return $user_dirname;
+        }
+    }
+}
