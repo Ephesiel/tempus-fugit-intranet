@@ -187,12 +187,15 @@ class User {
      * @access public
      * 
      * @param string    $field_slug
-     * @param bool      $url        If the field is a file, do you want the url or the directory link ? Default true
+     * @param string    $type           If the field is a file, you have multiple choice :
+     *                                      - 'real_url' (default)  : give you the url of the file (to display an image for example)
+     *                                      - 'absolute_path'       : give you the path for the file (usefull when move file)
+     *                                      - 'upload_path'         : give you the path from inside the upload dir (this is the database value)
      * 
      * @return mixed    The value of the field
      * @return false    If not ok or if the field isn't allowed for this user
      */
-    public function get_value_for_field( $field_slug, $url = true ) {
+    public function get_value_for_field( $field_slug, $type = 'real_url' ) {
         if ( ! $this->is_ok() || ! array_key_exists( $field_slug, $this->allowed_fields() ) ) {
             return false;
         }
@@ -208,8 +211,16 @@ class User {
             $value = $field->default_value;
         }
 
-        if ( $field->is_file ) {
-            $value = $this->get_file_link( $value, $url );
+        if ( $field->is_file && ! empty( $value ) && $type !== 'upload_path' ) {
+            require_once TFI_PATH . 'includes/file-manager.php';
+            $file_manager = new FileManager;
+
+            if ( $type === 'absolute_path' ) {
+                $value = $file_manager->get_file_link( $value, false );
+            }
+            else {
+                $value = $file_manager->get_file_link( $value, true );
+            }
         }
 
         return $value;
@@ -232,102 +243,77 @@ class User {
             return false;
         }
 
+        require_once TFI_PATH . 'includes/field-sanitizor.php';
+        require_once TFI_PATH . 'includes/file-manager.php';
+        $field_sanitizor    = new FieldSanitizor;
+        $file_manager       = new FileManager;
+
         $changes = array();
         $result = array();
 
         foreach ( $this->allowed_fields() as $field ) {
-            if ( isset( $datas[$field->name] ) || isset( $files[$field->name] )  ) {
+            if ( isset( $datas[$field->name] ) ) {
+                $sanitation = false;
                 switch ( $field->type ) {
                     case 'text':
-                        $sanitize = filter_var( stripslashes( $datas[$field->name] ), FILTER_SANITIZE_STRING );
-                        if ( ! empty( $sanitize ) ) {
-                            $changes[$field->name] = $sanitize;
-                            $result[$field->name]  = true;
-                        }
-                        else {
-                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a text' );
-                        }
+                        $sanitation = $field_sanitizor->sanitize_text_field( $datas[$field->name] );
                     break;
                     case 'link':
-                        $sanitize = esc_url( filter_var( stripslashes( $datas[$field->name] ), FILTER_SANITIZE_STRING ) );
-                        if ( ! empty( $sanitize ) ) {
-                            $success = true;
-
-                            if ( isset( $field->special_params['mandatory_domains'] ) && ! empty( $field->special_params['mandatory_domains'] ) ) {
-                                $domains = $field->special_params['mandatory_domains'];
-                                $domain = parse_url( $sanitize, PHP_URL_HOST );
-                                $success = in_array( $domain, $domains ) || ( substr( $domain, 0, 4 ) === 'www.' && in_array( substr( $domain, 4 ), $domains ) );
-
-                                if ( ! $success ) {
-                                    $result[$field->name]['tfi-error'][] = sprintf( __( 'The hostname isn\'t in the mandatory names, please enter a link in one of those domains: %s' ), implode( ',', $field->special_params['mandatory_domains'] ) );
-                                }
-                            }
-
-                            if ( $success ) {
-                                $changes[$field->name] = $sanitize;
-                                $result[$field->name]  = true;
-                            }
-                        }
-                        else {
-                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a link' );
-                        }
+                        $sanitation = $field_sanitizor->sanitize_link_field( $datas[$field->name], $field->special_params );
                     break;
                     case 'number':
-                        $sanitize = filter_var( $datas[$field->name], FILTER_SANITIZE_NUMBER_INT );
-                        if ( ! empty( $sanitize ) ) {
-                            if ( $field->special_params['min'] > $field->special_params['max'] || ( $sanitize >= $field->special_params['min'] && $sanitize <= $field->special_params['max'] ) ) {
-                                $changes[$field->name] = $sanitize;
-                                $result[$field->name]  = true;
-                            }
-                            else {
-                                $result[$field->name]['tfi-error'][] = sprintf( __( 'It should be >= %1$s and <= %2$s' ), $field->special_params['min'], $field->special_params['max'] );
-                            }
-                        }
-                        else {
-                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a number' );
-                        }
+                        $sanitation = $field_sanitizor->sanitize_number_field( $datas[$field->name], $field->special_params );
                     break;
                     case 'color':
-                        $sanitize = '#' . substr( preg_replace( '/[^a-f0-9]/', '', $datas[$field->name] ), 0, 6 );
-                        if ( strlen( $sanitize ) === 7 ) {
-                            $changes[$field->name] = $sanitize;
-                            $result[$field->name]  = true;
-                        }
-                        else {
-                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a color' );
-                        }
-                    break;
-                    case 'image':
-                        if ( isset ( $files[$field->name] ) ) {
-                            $file_result = $this->upload_file( $field, $files[$field->name] );
-                            if ( is_string( $file_result ) ) {
-                                $changes[$field->name] = $file_result;
-                                $result[$field->name]  = true;
-                            }
-                            else {
-                                // The result is an array of errors
-                                $result[$field->name]  = $file_result;
-                            }
-                        }
-                        else {
-                            $result[$field->name]['tfi-info'][] = __( 'No file given' );
-                        }
+                        $sanitation = $field_sanitizor->sanitize_color_field( $datas[$field->name] );
                     break;
                 }
+
+                if ( $sanitation === false ) {
+                    $result[$field->name]['tfi-error'] = $field_sanitizor->last_error();
+                }
+                else if ( array_key_exists( $field->name, $this->user_db_datas() ) && $this->user_db_datas()[$field->name] === $sanitation ) {
+                    $result[$field->name]['tfi-info'] = __( 'No change' );
+                }
+                else {
+                    $changes[$field->name] = $sanitation;
+                    $result[$field->name]['tfi-success']  = __( 'This field has been successfully changed' );
+                }
             }
-        }
+            else if ( isset( $files[$field->name] ) ) {
+                if ( $files[$field->name]['error'] !== 4 ) {
+                    $sanitation = false;
+                    switch ( $field->type ) {
+                        case 'image':
+                            $sanitation = $field_sanitizor->sanitize_post_file_field( $field, $files[$field->name], $this->id );
+                        break;
+                    }
+    
+                    if ( $sanitation === false ) {
+                        $result[$field->name]['tfi-error'] = $field_sanitizor->last_error();
+                    }
+                    else {
+                        $changes[$field->name] = $sanitation;
 
-        $user_datas = $this->user_db_datas();
+                        $old_value = $this->get_value_for_field( $field->name, 'upload_path' );
 
-        /**
-         * Each text, number, color fields... etc which are always send in POST and don't change all times are unset from the change array. 
-         */
-        foreach ( $result as $field_name => $value ) {
-            if ( $value === true && array_key_exists( $field_name, $user_datas ) && $changes[$field_name] === $user_datas[$field_name] ) {
-                $result[$field_name] = array(
-                    'tfi-info' => array( __( 'No change' ) )
-                );
-                unset( $changes[$field_name] );
+                        if ( $old_value !== '' ) {
+                            if ( ! $file_manager->remove_file( $old_value ) ) {
+                                $result[$field->name]['tfi-error'] = __( 'The old image failed to removed' );
+                            }
+                        }
+
+                        if ( ! $file_manager->upload_file( $files[$field->name]['tmp_name'], $sanitation ) ) {
+                            $result[$field->name]['tfi-error'] = __( 'Impossible to upload the new image' );
+                        }
+                        else {
+                            $result[$field->name]['tfi-success']  = __( 'This file has been uploaded with success' );
+                        }
+                    }
+                }
+                else {
+                    $result[$field->name]['tfi-info'] = __( 'No file given' );
+                }
             }
         }
 
@@ -367,140 +353,11 @@ class User {
     }
 
     /**
-     * Get_file_link.
-     * 
-     * Return the full url of a given path
-     * 
-     * @since 1.0.0
-     * @since 1.2.0     Add $url param
-     * @access private
-     * 
-     * @param string    $value  File path stored in the database
-     * @param bool      $url    Do you want the url or the directory link ?
-     * 
-     * @return string the url (or dir) of the file
-     */
-    private function get_file_link( $value, $url ) {
-        if ( $url && defined( 'TFI_UPLOAD_FOLDER_URL' ) && ! empty( $value ) ) {
-            return TFI_UPLOAD_FOLDER_URL . '/' . $value;
-        }
-        if ( ! $url && defined( 'TFI_UPLOAD_FOLDER_DIR' ) && ! empty( $value ) ) {
-            return TFI_UPLOAD_FOLDER_DIR . '/' . $value;
-        }
-        return $value;
-    }
-
-    /**
-     * Upload_file.
-     * 
-     * Check file content and then add it to the upload folder
-     * 
-     * @since 1.0.0
-     * @param Field $field the specific field for the file
-     * @param array $file the file to save in the upload dir. Keys should be the same than $_FILES (see in documentation)
-     * @return string the path name to be able to store it in the database
-     * @return array of errors if one occured
-     * @throws \Exception if there is a fatal error on upload
-     */
-    private function upload_file( $field, $file ) {
-        if ( $file['error'] !== UPLOAD_ERR_OK ) {
-            switch ( $file['error'] ) {
-                case UPLOAD_ERR_INI_SIZE :
-                    return array( 'tfi-error' => array( __( 'Sorry the file is too big' ) ) );
-                case UPLOAD_ERR_FORM_SIZE :
-                    return array( 'tfi-error' => array( __( 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form' ) ) );
-                case UPLOAD_ERR_PARTIAL :
-                    return array( 'tfi-error' => array( __( 'The uploaded file was only partially uploaded' ) ) );
-                case UPLOAD_ERR_NO_FILE :
-                    return array( 'tfi-info' => array( __( 'No file given' ) ) );
-                case UPLOAD_ERR_NO_TMP_DIR :
-                    return array( 'tfi-error' => array( __( 'Missing a temporary folder' ) ) );
-                case UPLOAD_ERR_CANT_WRITE :
-                    return array( 'tfi-error' => array( __( 'Failed to write file to disk.' ) ) );
-                case UPLOAD_ERR_EXTENSION :
-                    return array( 'tfi-error' => array( __( 'A PHP extension stopped the file upload.' ) ) );
-                default:
-                    return array( 'tfi-error' => array( __( 'An unknown upload error occured' ) ) );
-            }
-        }
-
-        $extension = '';
-
-        // Check MIME Type
-        $finfo = new \finfo( FILEINFO_MIME_TYPE );
-
-        if ( $field->type === 'image' ) {
-            $extension = array_search(
-                $finfo->file( $file['tmp_name'] ),
-                array(
-                    'jpg' => 'image/jpeg',
-                    'png' => 'image/png',
-                    'gif' => 'image/gif',
-                )
-            );
-    
-            if ( $extension === false ) {
-                return array( 'tfi-error' => array( __( 'This value should be an image, please give a .png, .jpeg or .gif file' ) ) );
-            }
-    
-            // resize the image
-            if ( isset( $field->special_params['width'] ) && isset( $field->special_params['height'] ) ) {
-                try {
-                    if ( $extension != 'gif' ) {
-                        require_once TFI_PATH . 'utilities/resize-image.php';
-
-                        $resize_image = new ResizeImage( $file['tmp_name'] );
-                        $resize_image->resize_to( $field->special_params['width'],  $field->special_params['height'] );
-                        $resize_image->save_image( $file['tmp_name'] );
-                    }
-                    else {
-                        require_once TFI_PATH . 'utilities/resize-gif.php';
-
-                        $resize_gif = new ResizeGif( $file['tmp_name'] );
-                        $resize_gif->resize_to( $field->special_params['width'],  $field->special_params['height'] );
-                        $resize_gif->save_image( $file['tmp_name'] );
-                    }
-                }
-                catch ( \Exception $e) {
-                    throw new \Exception( sprintf( __( 'This error occured when the image %1$s resized: %2$s' ), $field->display_name, $e->getMessage() ) );
-                }
-            }
-        }
-
-        if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
-            throw new \Exception( 'Impossible to find the upload directory.' );
-        }
-
-        $filepath   = tfi_get_user_file_folder_path( $this->id, $field->special_params['folder'], false );
-        $dirname    = TFI_UPLOAD_FOLDER_DIR . '/' . $filepath;
-
-        if ( ! file_exists( $dirname ) ) {
-            wp_mkdir_p( $dirname );
-        }
-
-        // Delete the old version of the file.
-        $value = $this->get_value_for_field( $field->name, false );
-        if ( ! empty( $value ) ) {
-            unlink( $value ); 
-        }
-
-        $filename   = $field->name . '.' . $extension;
-        $result     = move_uploaded_file ( $file['tmp_name'], $dirname . '/' . $filename );
-
-        if ( $result === false ) {
-            throw new \Exception( 'Impossible to write the file.' );
-        }
-
-        // Store the path name (without the plugin directory to be able to reuse the path if we change it)
-        return $filepath . '/' . $filename;
-    }
-
-    /**
      * User_db_datas.
      * 
      * Return the user datas from database.
      * Those datas are stored in the database so one call will be done only if needed
-     * If user_datas have already be called, just return the $user_datas class attribute
+     * If user_datas has already be called, just return the $user_datas class attribute
      * 
      * @since 1.0.0
      * @access private

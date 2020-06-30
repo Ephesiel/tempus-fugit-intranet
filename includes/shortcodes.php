@@ -372,15 +372,10 @@ class ShortcodesManager {
         $html = '';
 
         if ( isset( $this->database_result[$field->name] ) ) {
-            if ( $this->database_result[$field->name] === true ) {
-                $html = '<div class="tfi-success"><small>' . esc_html__( 'This field has been successfully changed' ) . '</small></div>';
-            }
-            else {
-                foreach ( $this->database_result[$field->name] as $message_type => $messages ) {
-                    $html = '<div class ="' . esc_attr( $message_type ) . '"><small>';
-                    $html.=     implode( '<br />', $messages ); 
-                    $html.= '</small></div>';
-                }
+            foreach ( $this->database_result[$field->name] as $message_type => $message ) {
+                $html = '<div class ="tfi-message ' . esc_attr( $message_type ) . '"><small>';
+                $html.=     $message; 
+                $html.= '</small></div>';
             }
         }
 

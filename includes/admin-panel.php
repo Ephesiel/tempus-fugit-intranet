@@ -518,7 +518,7 @@ class AdminPanelManager {
 						$user = new User( $wp_user->ID );
 					}
 
-					$old_path 	= $user->get_value_for_field( $field_slug, false );
+					$old_path 	= $user->get_value_for_field( $field_slug, 'absolute_path' );
 					if ( ! file_exists( $old_path ) ) {
 						continue;
 					}

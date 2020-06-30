@@ -36,6 +36,9 @@ Intranet to allow every students to add their own datas at home whitout passing 
 * Add the filter which allows to get new datas of a user, once send into database. 
 * Add files folders, to sort files inside the upload directory
 
+= 1.2.1 =
+* Add color and number field types
+
 == How to use ==
 
 = After installation =
