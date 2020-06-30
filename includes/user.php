@@ -232,7 +232,7 @@ class User {
             return false;
         }
 
-        $to_send = array();
+        $changes = array();
         $result = array();
 
         foreach ( $this->allowed_fields() as $field ) {
@@ -241,7 +241,7 @@ class User {
                     case 'text':
                         $sanitize = filter_var( stripslashes( $datas[$field->name] ), FILTER_SANITIZE_STRING );
                         if ( ! empty( $sanitize ) ) {
-                            $to_send[$field->name] = $sanitize;
+                            $changes[$field->name] = $sanitize;
                             $result[$field->name]  = true;
                         }
                         else {
@@ -264,7 +264,7 @@ class User {
                             }
 
                             if ( $success ) {
-                                $to_send[$field->name] = $sanitize;
+                                $changes[$field->name] = $sanitize;
                                 $result[$field->name]  = true;
                             }
                         }
@@ -275,10 +275,8 @@ class User {
                     case 'number':
                         $sanitize = filter_var( $datas[$field->name], FILTER_SANITIZE_NUMBER_INT );
                         if ( ! empty( $sanitize ) ) {
-                            $success = true;
-
                             if ( $field->special_params['min'] > $field->special_params['max'] || ( $sanitize >= $field->special_params['min'] && $sanitize <= $field->special_params['max'] ) ) {
-                                $to_send[$field->name] = $sanitize;
+                                $changes[$field->name] = $sanitize;
                                 $result[$field->name]  = true;
                             }
                             else {
@@ -289,11 +287,21 @@ class User {
                             $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a number' );
                         }
                     break;
+                    case 'color':
+                        $sanitize = '#' . substr( preg_replace( '/[^a-f0-9]/', '', $datas[$field->name] ), 0, 6 );
+                        if ( strlen( $sanitize ) === 7 ) {
+                            $changes[$field->name] = $sanitize;
+                            $result[$field->name]  = true;
+                        }
+                        else {
+                            $result[$field->name]['tfi-error'][] = __( 'This value cannot be sanitized as a color' );
+                        }
+                    break;
                     case 'image':
                         if ( isset ( $files[$field->name] ) ) {
                             $file_result = $this->upload_file( $field, $files[$field->name] );
                             if ( is_string( $file_result ) ) {
-                                $to_send[$field->name] = $file_result;
+                                $changes[$field->name] = $file_result;
                                 $result[$field->name]  = true;
                             }
                             else {
@@ -309,7 +317,21 @@ class User {
             }
         }
 
-        if ( $this->update_user_datas( $to_send ) ) {
+        $user_datas = $this->user_db_datas();
+
+        /**
+         * Each text, number, color fields... etc which are always send in POST and don't change all times are unset from the change array. 
+         */
+        foreach ( $result as $field_name => $value ) {
+            if ( $value === true && array_key_exists( $field_name, $user_datas ) && $changes[$field_name] === $user_datas[$field_name] ) {
+                $result[$field_name] = array(
+                    'tfi-info' => array( __( 'No change' ) )
+                );
+                unset( $changes[$field_name] );
+            }
+        }
+
+        if ( $this->update_user_datas( $changes ) ) {
             return $result;
         }
         return false;

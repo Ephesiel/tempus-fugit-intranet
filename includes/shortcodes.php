@@ -320,6 +320,17 @@ class ShortcodesManager {
         return $o;
     }
 
+    private function add_field_color( $field, $field_form_name ) {
+        $o = '<input';
+        $o.=    ' type="color"';
+        $o.=    ' id="' . esc_attr( $field->name ) .'"';
+        $o.=    ' name="' . esc_attr( $field_form_name ) . '"';
+        $o.=    ' value="' . esc_attr( $this->user->get_value_for_field( $field->name ) ) . '"';
+        $o.= '/>';
+
+        return $o;
+    }
+
     private function preview_field_image( $field ) {
         $src = $this->user->get_value_for_field( $field->name );
 
