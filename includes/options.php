@@ -18,8 +18,9 @@ class OptionsManager {
      * All options and their default values
      * 
      * @since 1.1.0
-     * @since 1.3.0     Add tfi_file_folders option
-     * @since 1.2.1     Add number and color field types
+     * @since 1.1.3     Add tfi_file_folders option
+     * @since 1.2.1     Add 'number' and 'color' field types
+     * @since 1.2.2     Add 'multiple' field types
      * 
      * @static
      * @access private
@@ -44,32 +45,12 @@ class OptionsManager {
             )
         ),
         'tfi_field_types' => array(
-            'image' => array(
-                'display_name' => 'Image',
-                'special_params' => array(
-                    'height',
-                    'width'
-                )
-            ),
-            'link' => array(
-                'display_name' => 'Link',
-                'special_params' => array()
-            ),
-            'text' => array(
-                'display_name' => 'Text',
-                'special_params' => array()
-            ),
-            'number' => array(
-                'display_name' => 'Number',
-                'special_params' => array(
-                    'min',
-                    'max'
-                )
-            ),
-            'color' => array(
-                'display_name' => 'Color',
-                'special_params' => array()
-            )
+            'image' => 'Image',
+            'link' => 'Link',
+            'text' => 'Texte',
+            'number' => 'Number',
+            'color' => 'Color',
+            'multiple' => 'Multiple'
         ),
         'tfi_fields' => array(
             'facebook' => array(
@@ -146,6 +127,25 @@ class OptionsManager {
                     update_option( $option_name, $new_value );
                 }
             }
+        }
+    }
+
+    /**
+     * Delete_options.
+     * 
+     * Delete every option.
+     * This method sould only be used on uninstall
+     * 
+     * @since 1.2.2
+     * @access public
+     */
+    public function delete_options() {
+        if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+            return;
+        }
+
+        foreach ( self::$default_options as $option_name => $display_name ) {
+            delete_option( $option_name );
         }
     }
 
@@ -321,7 +321,8 @@ class OptionsManager {
      * Verify_fields.
      * 
      * @since 1.1.0
-     * @since 1.2.1             Add number type verification
+     * @since 1.2.1             Add 'number' type verification
+     * @since 1.2.2             Special params type are verified in another method to allow recursion
      * @access private
      * 
      * @param array $fields     contains all fields to verify for the option tfi_fields
@@ -363,64 +364,108 @@ class OptionsManager {
                 }
             }
 
-            /**
-             * Files special params
-             */
-            if ( $sanitize_field_value['type'] === 'image' ) {
-                $file_folders = tfi_get_option( 'tfi_file_folders' );
-                $sanitize_field_value['special_params']['folder'] = array_key_first( $file_folders );
-                if ( isset( $field_value['special_params']['folder'] ) && array_key_exists( $field_value['special_params']['folder'], $file_folders ) ) {
-                    $sanitize_field_value['special_params']['folder'] = $field_value['special_params']['folder'];
-                }
-            }
-
-            /**
-             * Image special params
-             */
-            if ( $sanitize_field_value['type'] === 'image' ) {
-                $sanitize_field_value['special_params']['height'] = 0;
-                $sanitize_field_value['special_params']['width'] = 0;
-
-                if ( isset( $field_value['special_params']['height'] ) && is_numeric( $field_value['special_params']['height'] ) ) {
-                    $sanitize_field_value['special_params']['height'] = floor( abs( $field_value['special_params']['height'] ) );
-                }
-                if ( isset( $field_value['special_params']['width'] ) && is_numeric( $field_value['special_params']['width'] ) ) {
-                    $sanitize_field_value['special_params']['width'] = floor( abs( $field_value['special_params']['width'] ) );
-                }
-            }
-            /**
-             * Link special params
-             */
-            else if ( $sanitize_field_value['type'] === 'link' ) {
-                $sanitize_field_value['special_params']['mandatory_domains'] = array();
-
-                if ( isset( $field_value['special_params']['mandatory_domains'] ) && is_array( $field_value['special_params']['mandatory_domains'] ) ) {
-                    foreach ( $field_value['special_params']['mandatory_domains'] as $domain_name ) {
-                        if ( tfi_is_valid_domain_name( $domain_name ) ) {
-                            $sanitize_field_value['special_params']['mandatory_domains'][] = $domain_name;
-                        }
-                    }
-                }
-            }
-            /**
-             * Number special params
-             */
-            else if ( $sanitize_field_value['type'] === 'number' ) {
-                $sanitize_field_value['special_params']['min'] = 0;
-                $sanitize_field_value['special_params']['max'] = -1;
-
-                if ( isset( $field_value['special_params']['min'] ) && is_numeric( $field_value['special_params']['min'] ) ) {
-                    $sanitize_field_value['special_params']['min'] = $field_value['special_params']['min'];
-                }
-                if ( isset( $field_value['special_params']['max'] ) && is_numeric( $field_value['special_params']['max'] ) ) {
-                    $sanitize_field_value['special_params']['max'] = $field_value['special_params']['max'];
-                }
-            }
+            $special_params = isset( $field_value['special_params'] ) && is_array( $field_value['special_params'] ) ? $field_value['special_params'] : array();
+            $sanitize_field_value['special_params'] = $this->verify_special_params( $sanitize_field_value['type'], $special_params );
 
             $new_fields[$sanitize_field_slug] = $sanitize_field_value;
         }
 
         return $new_fields;
+    }
+
+    /**
+     * Verify_special_params.
+     * 
+     * Method for verification of special parameters of a field.
+     * This method has been refactorized when 'multiple' type has been added to allow recursion on it.
+     * 
+     * @since 1.2.2
+     * @access private
+     * 
+     * @param string    $type               The field type
+     * @param array     $special_params     Contains non sanitized special parameters
+     * 
+     * @return array    $special_params sanitized
+     */
+    private function verify_special_params( $type, $special_params ) {
+        $sanitize_special_params = array();
+
+        /**
+         * Files special params
+         */
+        if ( $type === 'image' ) {
+            $file_folders = tfi_get_option( 'tfi_file_folders' );
+            $sanitize_special_params['folder'] = array_key_first( $file_folders );
+            if ( isset( $special_params['folder'] ) && array_key_exists( $special_params['folder'], $file_folders ) ) {
+                $sanitize_special_params['folder'] = $special_params['folder'];
+            }
+        }
+
+        /**
+         * Image special params
+         */
+        if ( $type === 'image' ) {
+            $sanitize_special_params['height'] = 0;
+            $sanitize_special_params['width'] = 0;
+
+            if ( isset( $special_params['height'] ) && is_numeric( $special_params['height'] ) ) {
+                $sanitize_special_params['height'] = floor( abs( $special_params['height'] ) );
+            }
+            if ( isset( $special_params['width'] ) && is_numeric( $special_params['width'] ) ) {
+                $sanitize_special_params['width'] = floor( abs( $special_params['width'] ) );
+            }
+        }
+        /**
+         * Link special params
+         */
+        else if ( $type === 'link' ) {
+            $sanitize_special_params['mandatory_domains'] = array();
+
+            if ( isset( $special_params['mandatory_domains'] ) && is_array( $special_params['mandatory_domains'] ) ) {
+                foreach ( $special_params['mandatory_domains'] as $domain_name ) {
+                    if ( tfi_is_valid_domain_name( $domain_name ) ) {
+                        $sanitize_special_params['mandatory_domains'][] = $domain_name;
+                    }
+                }
+            }
+        }
+        /**
+         * Number special params
+         */
+        else if ( $type === 'number' ) {
+            $sanitize_special_params['min'] = 0;
+            $sanitize_special_params['max'] = -1;
+
+            if ( isset( $special_params['min'] ) && is_numeric( $special_params['min'] ) ) {
+                $sanitize_special_params['min'] = $special_params['min'];
+            }
+            if ( isset( $special_params['max'] ) && is_numeric( $special_params['max'] ) ) {
+                $sanitize_special_params['max'] = $special_params['max'];
+            }
+        }
+        /**
+         * Multiple special params
+         */
+        else if ( $type === 'multiple' ) {
+            $sanitize_special_params['min'] = 1;
+            $sanitize_special_params['max'] = 0;
+            $sanitize_special_params['multiple_field']['type'] = 'text';
+
+            if ( isset( $special_params['min'] ) && is_numeric( $special_params['min'] ) ) {
+                $sanitize_special_params['min'] = floor( abs( $special_params['min'] ) );
+            }
+            if ( isset( $special_params['max'] ) && is_numeric( $special_params['max'] ) ) {
+                $sanitize_special_params['max'] = floor( abs( $special_params['max'] ) );
+            }
+            if ( isset( $special_params['multiple_field']['type'] ) && array_key_exists( $special_params['multiple_field']['type'], self::$default_options['tfi_field_types'] ) ) {
+                $sanitize_special_params['multiple_field']['type'] = $special_params['multiple_field']['type'];
+            }
+
+            $field_special_params = isset( $special_params['multiple_field']['special_params'] ) && is_array( $special_params['multiple_field']['special_params'] ) ? $special_params['multiple_field']['special_params'] : array();
+            $sanitize_special_params['multiple_field']['special_params'] = $this->verify_special_params( $sanitize_special_params['multiple_field']['type'], $field_special_params );
+        }
+
+        return $sanitize_special_params;
     }
 
     /**

@@ -1,5 +1,15 @@
 .tfi-options-table th, .tfi-options-table td {
     padding: 5px;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.tfi-options-table td input[type=checkbox] {
+    margin-top: 8px;
+}
+
+.tfi-options-table tr {
+    white-space: nowrap;
 }
 
 .tfi-option-warning {
@@ -18,15 +28,33 @@
     font-size: 20px;
 }
 
+.tfi-options-table .tfi-form-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.tfi-options-table .tfi-form-col > *:not(:first-child):not([hidden=true]) {
+    margin-top: 5px;
+}
+
 .tfi-options-table .param-fields {
     display: flex;
+}
+
+.tfi-options-table .param-fields > * {
+    white-space: nowrap;
 }
 
 .tfi-options-table .param-fields label {
     font-weight: bold;
 }
 
-.tfi-options-table .param-fields input[type="number"] {
+.tfi-options-table .param-fields [type="number"] {
     width: 70px;
+    min-width: 70px;
     margin-right: 5px;
+}
+
+.tfi-options-table .tfi-folder-row {
+    vertical-align: bottom;
 }

@@ -47,10 +47,8 @@ class UninstallManager {
     private function delete_options() {
         require_once TFI_PATH . 'includes/options.php';
 
-        $options_manager = new OptionsManager; 
-        foreach ( $options_manager->all_options_name() as $option_name ) {
-            delete_option( $option_name );
-        }
+        $option_manager = new OptionsManager;
+        $option_manager->delete_options();
     }
     
     /**

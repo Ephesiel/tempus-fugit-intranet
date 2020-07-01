@@ -253,3 +253,37 @@ if ( ! function_exists( 'tfi_get_user_file_folder_path' ) ) {
         }
     }
 }
+
+if ( ! function_exists( 'tfi_array_merge_recursive_ex' ) ) {
+    /**
+     * Tfi_array_merge_recursive_ex.
+     * 
+     * Merge 2 arrays but excludes multiple keys
+     * 
+     * @since 1.2.2
+     * 
+     * @param array         $array1         The first array to merge.
+     * @param array         $array2         The second array to merge.
+     * 
+     * @return array        Merged array
+     * @author              Mark.Ablov https://stackoverflow.com/questions/25712099/php-multidimensional-array-merge-recursive
+     */
+    function tfi_array_merge_recursive_ex(array $array1, array $array2)
+    {
+        $merged = $array1;
+
+        foreach ($array2 as $key => & $value) {
+            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = tfi_array_merge_recursive_ex($merged[$key], $value);
+            } else if (is_numeric($key)) {
+                if (!in_array($value, $merged)) {
+                    $merged[] = $value;
+                }
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
+    }
+}

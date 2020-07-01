@@ -360,11 +360,21 @@ class AdminPanelManager {
                         $domains[] = $domain;
                     }
                     $field['special_params']['mandatory_domains'] = $domains;
+				}
+                /**
+                 * This is the same value but inside a multiple fields
+                 */
+                if ( isset( $field['special_params']['multiple_field']['special_params']['mandatory_domains'] ) ) {
+                    $domains = array();
+                    foreach( explode( ',', $field['special_params']['multiple_field']['special_params']['mandatory_domains'] ) as $domain ) {
+                        $domains[] = $domain;
+                    }
+                    $field['special_params']['multiple_field']['special_params']['mandatory_domains'] = $domains;
                 }
 
                 $new_fields[$field['id']] = $field;
             }
-        }
+		}
         
 		require_once TFI_PATH . 'includes/options.php';
 
@@ -674,7 +684,7 @@ class AdminPanelManager {
 				 * It should be deleted from the input array before verification (in the sanitize method)
 				 */
 				?>
-				<tr hidden>
+				<tr id="tfi-folder-row-to-clone" hidden>
 					<td><input type="text" name="tfi_file_folders[number_to_replace][display_name]" value="" /></td>
 					<td>
 						<select name="tfi_file_folders[number_to_replace][parent]">
@@ -686,16 +696,14 @@ class AdminPanelManager {
 					<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-folder-number_to_replace')" class="button action"><?php esc_html_e( 'Remove folder' ); ?></button></td>
 				</tr>
 			</tbody>
-			<tr><td><button type="button" onclick="tfi_add_row('tfi-folders-table', 'tfi-folder-', 'number_to_replace')" class="button action"><?php esc_html_e( 'Add a folder' ); ?></button></td></tr>
+			<tr><td><button type="button" onclick="tfi_add_row('tfi-folder-row-to-clone', 'tfi-folder-', 'number_to_replace')" class="button action"><?php esc_html_e( 'Add a folder' ); ?></button></td></tr>
 		</table>
 		<?php
 	}
 
 	public function display_fields_section() {
 		$user_types = tfi_get_option( 'tfi_user_types' );
-		$field_types = tfi_get_option( 'tfi_field_types' );
 		$fields = tfi_get_option( 'tfi_fields' );
-		$folders = tfi_get_option( 'tfi_file_folders' );
 		?>
 		<table id="tfi-fields-table" class="tfi-options-table">
 			<thead>
@@ -713,140 +721,182 @@ class AdminPanelManager {
 				</tr>
 			</thead>
 			<tbody>
-				<?php $count = 0;
-				foreach ( $fields as $id => $datas ): ?>
-				<tr id="tfi-field-<?php echo esc_attr( $id ); ?>">
-					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][id]" value="<?php echo esc_attr( $id ); ?>" /></td>
-					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][real_name]" value="<?php esc_attr_e( $datas['real_name'] ); ?>" /></td>
-					<td>
-						<select onchange="tfi_change_type_param(this)" class="field-type-select" name="tfi_fields[<?php echo esc_attr( $id ); ?>][type]" param-row="param-fields-<?php echo esc_attr( $id ); ?>">
-							<?php foreach ( $field_types as $type_id => $param ): ?>
-							<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['type'] ? 'selected' : ''; ?>><?php esc_html_e( $param['display_name'] ); ?></option>
-							<?php endforeach; ?>
-						</select>	
-					</td>
-					<td><input type="text" name="tfi_fields[<?php echo esc_attr( $id ); ?>][default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
-					<td class="param-fields-<?php echo esc_attr( $id ); ?> param-fields">
-						<div hidden class="special-param-wrapper" field-type="image">
-							<label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][height]"
-									value="<?php echo isset( $datas['special_params']['height'] ) ? esc_attr( $datas['special_params']['height'] ) : 0; ?>" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="image">
-							<label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][width]"
-									value="<?php echo isset( $datas['special_params']['width'] ) ? esc_attr( $datas['special_params']['width'] ) : 0; ?>" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="link">
-							<label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
-							<input  type="text"
-									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][mandatory_domains]"
-									value="<?php echo isset( $datas['special_params']['mandatory_domains'] ) ? esc_attr( implode( ',', $datas['special_params']['mandatory_domains'] ) ) : ''; ?>"
-									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="number">
-							<label title="<?php esc_attr_e( 'The minimum number possible to choose (if min > max there is no min value)' ); ?>"><?php esc_html_e( 'm:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][min]"
-									value="<?php echo isset( $datas['special_params']['min'] ) ? esc_attr( $datas['special_params']['min'] ) : '0'; ?>" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="number">
-							<label title="<?php esc_attr_e( 'The maximum number possible to choose (if max < min there is no max value)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][max]"
-									value="<?php echo isset( $datas['special_params']['max'] ) ? esc_attr( $datas['special_params']['max'] ) : '-1'; ?>" />
-						</div>
-					</td>
-					<td class="param-fields-<?php echo esc_attr( $id ); ?>">
-						<div hidden class="special-param-wrapper" field-type="image">
-							<select name="tfi_fields[<?php echo esc_attr( $id ); ?>][special_params][folder]">
-								<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
-								<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo isset( $datas['special_params']['folder'] ) && $select_folder_slug == $datas['special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
-								<?php endforeach; ?>
-							</select>
-						</div>
-					</td>
-					<?php foreach ( $user_types as $type_id => $name ): ?>
-					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[<?php echo esc_attr( $id ); ?>][users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'] ) ? 'checked ' : ''; ?>/></td>
-					<?php endforeach; ?>
-					<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-field-<?php echo esc_attr( $id ); ?>'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Remove field' ); ?></button></td>
-					<td class="change-field-row"><button type="button" onclick="tfi_move_row_to_up('tfi-field-<?php echo esc_attr( $id ); ?>')" class="button action">&#8597;</button></td>
-				</tr>
-				<?php $count++;
-				endforeach; 
+				<?php
+				foreach ( $fields as $id => $datas ) {
+				?><tr id="tfi-field-<?php echo esc_attr( $id ); ?>"><?php
+					$this->display_field_row( $id, $datas );
+				?></tr><?php
+				}
 				/**
 				 * This last row allows to add a new field by pressing the Add Field button.
 				 * It should be deleted from the input array before verification (in the sanitize method)
 				 */
+				?><tr hidden id="tfi-field-row-to-clone"><?php
+					$this->display_field_row( 'number_to_replace', array() );
+				?></tr><?php
 				?>
-				<tr hidden>
-					<td><input type="text" name="tfi_fields[number_to_replace][id]" value="<?php esc_attr_e( 'field_name' ); ?>" /></td>
-					<td><input type="text" name="tfi_fields[number_to_replace][real_name]" value="<?php esc_attr_e( 'My field name' ); ?>" /></td>
-					<td>
-						<select onchange="tfi_change_type_param(this)" class="field-type-select" name="tfi_fields[number_to_replace][type]" param-row="param-fields-number_to_replace">
-							<?php foreach ( $field_types as $type_id => $param ): ?>
-							<option value="<?php echo esc_attr( $type_id ); ?>"><?php esc_html_e( $param['display_name'] ); ?></option>
-							<?php endforeach; ?>
-						</select>	
-					</td>
-					<td><input type="text" name="tfi_fields[number_to_replace][default]" value="" /></td>
-					<td class="param-fields param-fields-number_to_replace" >
-						<div hidden class="special-param-wrapper" field-type="image">
-							<label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[number_to_replace][special_params][height]"
-									value="0" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="image">
-							<label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[number_to_replace][special_params][width]"
-									value="0" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="link">
-							<label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
-							<input  type="text"
-									name="tfi_fields[number_to_replace][special_params][mandatory_domains]"
-									value=""
-									placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="number">
-							<label title="<?php esc_attr_e( 'The minimum number possible to choose (if min > max there is no min value)' ); ?>"><?php esc_html_e( 'm:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[number_to_replace][special_params][min]"
-									value="0" />
-						</div>
-						<div hidden class="special-param-wrapper" field-type="number">
-							<label title="<?php esc_attr_e( 'The maximum number possible to choose (if max < min there is no max value)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
-							<input  type="number"
-									name="tfi_fields[number_to_replace][special_params][max]"
-									value="-1" />
-						</div>
-					</td>
-					<td class="param-fields-number_to_replace">
-                        <div hidden class="special-param-wrapper" field-type="image">
-                            <select name="tfi_fields[number_to_replace][special_params][folder]">
-                                <?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
-                                <option value="<?php echo esc_attr( $select_folder_slug ); ?>"><?php esc_html_e( $select_folder['display_name'] ); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-						</div>
-					</td>
-					<?php foreach ( $user_types as $type_id => $name ): ?>
-					<td style="text-align: center;"><input type="checkbox" name="tfi_fields[number_to_replace][users][<?php echo esc_attr( $type_id ); ?>]" /></td>
-					<?php endforeach; ?>
-					<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-field-number_to_replace'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Remove field' ); ?></button></td>
-					<td class="change-field-row"><button type="button" onclick="tfi_move_row_to_up('tfi-field-number_to_replace')" class="button action">&#8597;</button></td>
-				</tr>
 			</tbody>
-			<tr><td><button type="button" onclick="tfi_add_row('tfi-fields-table', 'tfi-field-', 'number_to_replace'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Add a field' ); ?></button></td></tr>
+			<tr><td><button type="button" onclick="tfi_add_row('tfi-field-row-to-clone', 'tfi-field-', 'number_to_replace'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Add a field' ); ?></button></td></tr>
 		</table>
 		<?php
 	}
 
-	function display_users_section() {
+	private function display_field_row( $id, $datas ) {
+		$user_types = tfi_get_option( 'tfi_user_types' );
+		$field_types = tfi_get_option( 'tfi_field_types' );
+		$folders = tfi_get_option( 'tfi_file_folders' );
+
+		$default_special_params = array(
+			'height' => 0,
+			'width' => 0,
+			'min' => 0,
+			'max' => 0,
+			'min_length' => 0,
+			'max_length' => 0,
+			'mandatory_domains' => array(),
+			'folder' => OptionsManager::get_parent_file_folder_slug()
+		);
+
+		$default_multiple_fields = array(
+			'multiple_field' => array(
+				'type' => 'text',
+				'special_params' => $default_special_params
+			)
+		);
+
+		$default_datas = array(
+			'real_name' => __( 'New field' ),
+			'type' => 'text',
+			'default' => '',
+			'special_params' => array_merge( $default_special_params, $default_multiple_fields ),
+			'users' => array()
+		);
+
+		$datas = tfi_array_merge_recursive_ex( $default_datas, $datas );
+		$name = 'tfi_fields[' . $id . ']';
+		$param_class = 'param-fields-' . $id;
+		$param_multiple_class = 'param-fields-multiple-' . $id;
+		?>
+		<td><input type="text" name="<?php echo esc_attr( $name ); ?>[id]" value="<?php echo esc_attr( $id ); ?>" /></td>
+		<td><input type="text" name="<?php echo esc_attr( $name ); ?>[real_name]" value="<?php esc_attr_e( $datas['real_name'] ); ?>" /></td>
+		<td>
+			<div class="tfi-form-col">
+				<div>
+					<select onchange="tfi_change_type_param(this)" class="field-type-select" name="<?php echo esc_attr( $name ); ?>[type]" param-row="<?php echo esc_attr( $param_class ); ?>">
+						<?php foreach ( $field_types as $type_id => $display_name ): ?>
+						<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['type'] ? 'selected' : ''; ?>><?php esc_html_e( $display_name ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+				<div class="<?php echo esc_attr( $param_class ); ?>" field-type="multiple" >
+					<select onchange="tfi_change_type_param(this)" class="field-type-select" name="<?php echo esc_attr( $name ); ?>[special_params][multiple_field][type]" param-row="<?php echo esc_attr( $param_multiple_class ); ?>">
+						<?php foreach ( $field_types as $type_id => $display_name ):
+						if ( $type_id != 'multiple' ): ?>
+						<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['special_params']['multiple_field']['type'] ? 'selected' : ''; ?>><?php esc_html_e( $display_name ); ?></option>
+						<?php endif;
+						endforeach; ?>
+					</select>
+				</div>
+			</div>
+		</td>
+		<td><input type="text" name="<?php echo esc_attr( $name ); ?>[default]" value="<?php esc_attr_e( $datas['default'] ); ?>" /></td>
+		<td>
+			<div class="tfi-form-col">
+				<div class="param-fields">
+					<?php $this->display_special_params( $id, $datas['special_params'], false ); ?>
+				</div>
+				<div class="param-fields <?php echo esc_attr( $param_class ); ?>" field-type="multiple">
+					<?php $this->display_special_params( $id, $datas['special_params']['multiple_field']['special_params'], true ); ?>
+				</div>
+			</div>
+		</td>
+		<td class="tfi-folder-row">
+			<div class="<?php echo esc_attr( $param_class ); ?>" field-type="image">
+				<select name="<?php echo esc_attr( $name ); ?>[special_params][folder]">
+					<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
+					<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo $select_folder_slug == $datas['special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+			<div class="<?php echo esc_attr( $param_class ); ?>" field-type="multiple">
+				<div class="<?php echo esc_attr( $param_multiple_class ); ?>" field-type="image">
+					<select name="<?php echo esc_attr( $name ); ?>[special_params][multiple_field][special_params][folder]">
+						<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
+						<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo $select_folder_slug == $datas['special_params']['multiple_field']['special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+			</div>
+		</td>
+		<?php foreach ( $user_types as $type_id => $name ): ?>
+		<td style="text-align: center;"><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'] ) ? 'checked ' : ''; ?>/></td>
+		<?php endforeach; ?>
+		<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-field-<?php echo esc_attr( $id ); ?>'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Remove field' ); ?></button></td>
+		<td class="change-field-row"><button type="button" onclick="tfi_move_row_to_up('tfi-field-<?php echo esc_attr( $id ); ?>')" class="button action">&#8597;</button></td>
+		<?php
+	}
+
+	private function display_special_params( $id, $special_params, $multiple ) {
+		$name = 'tfi_fields[' . $id . '][special_params]';
+		$class = 'param-fields-' . $id;
+		if ( $multiple ) {
+			$name .= '[multiple_field][special_params]';
+			$class = 'param-fields-multiple-' . $id;
+		}
+		?>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
+			<label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
+			<input  type="number"
+					min="0"
+					name="<?php echo esc_attr( $name ); ?>[height]"
+					value="<?php echo esc_attr( $special_params['height'] ); ?>" />
+		</div>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
+			<label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
+			<input  type="number"
+					min="0"
+					name="<?php echo esc_attr( $name ); ?>[width]"
+					value="<?php echo esc_attr( $special_params['width'] ); ?>" />
+		</div>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="link">
+			<label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
+			<input  type="text"
+					name="<?php echo esc_attr( $name ); ?>[mandatory_domains]"
+					value="<?php echo esc_attr( implode( ',', $special_params['mandatory_domains'] ) ); ?>"
+					placeholder="<?php esc_attr_e( 'domain.com,domain.net' ); ?>" />
+		</div>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="number">
+			<label title="<?php esc_attr_e( 'The minimum number possible to choose (if min > max there is no min value)' ); ?>"><?php esc_html_e( 'm:' ); ?></label>
+			<input  type="number"
+					name="<?php echo esc_attr( $name ); ?>[min]"
+					value="<?php echo esc_attr( $special_params['min'] ); ?>" />
+		</div>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="number">
+			<label title="<?php esc_attr_e( 'The maximum number possible to choose (if max < min there is no max value)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
+			<input  type="number"
+					name="<?php echo esc_attr( $name ); ?>[max]"
+					value="<?php echo esc_attr( $special_params['max'] ); ?>" />
+		</div>
+		<?php if ( ! $multiple ): ?>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="multiple">
+			<label title="<?php esc_attr_e( 'The minimum length (should be >= 0)' ); ?>"><?php esc_html_e( 'm:' ); ?></label>
+			<input  type="number"
+					min="0"
+					name="<?php echo esc_attr( $name ); ?>[min_length]"
+					value="<?php echo esc_attr( $special_params['min'] ); ?>" />
+		</div>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="multiple">
+			<label title="<?php esc_attr_e( 'The maximum length (no max if set to 0)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
+			<input  type="number"
+					min="0"
+					name="<?php echo esc_attr( $name ); ?>[max_length]"
+					value="<?php echo esc_attr( $special_params['max'] ); ?>" />
+		</div>
+		<?php endif; ?>
+		<?php
+	}
+
+	public function display_users_section() {
 		$user_types = tfi_get_option( 'tfi_user_types' );
 		$all_users = array();
 		foreach ( get_users() as $user ) {
@@ -886,7 +936,7 @@ class AdminPanelManager {
 				 * It should be deleted from the input array before verification (in the sanitize method)
 				 */
 				?>
-				<tr hidden>
+				<tr id="tfi-user-row-to-clone" hidden>
 					<td>
 						<select name="tfi_users[number_to_replace][id]">
 							<?php foreach ( $all_users as $user ): ?>
@@ -905,7 +955,7 @@ class AdminPanelManager {
 					<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-user-number_to_replace')" class="button action"><?php esc_html_e( 'Remove user' ); ?></button></td>
 				</tr>
 			</tbody>
-			<tr><td><button type="button" onclick="tfi_add_row('tfi-users-table', 'tfi-user-', 'number_to_replace')" class="button action"><?php esc_html_e( 'Add a user' ); ?></button></td></tr>
+			<tr><td><button type="button" onclick="tfi_add_row('tfi-user-row-to-clone', 'tfi-user-', 'number_to_replace')" class="button action"><?php esc_html_e( 'Add a user' ); ?></button></td></tr>
 		</table>
 		<?php
 	}

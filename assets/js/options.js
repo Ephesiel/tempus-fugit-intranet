@@ -7,13 +7,12 @@
  *  
  * @since 1.0.0
  * 
- * @param {string} [table_id]       The id of the table were the row will be added
+ * @param {string} [clone_row_id]   The id of the hidden row to clone
  * @param {string} [row_ids_suffix] The string to put before the id (the id is a number)
  * @param {string} [replace_value]  The given value will be changed by the new id (without the suffix) everywhere inside the new row
  */
-function tfi_add_row(table_id, row_ids_suffix, replace_value) {
-    let table = document.querySelector("#" + table_id + " tbody");
-    let row_to_clone = table.lastElementChild;
+function tfi_add_row(clone_row_id, row_ids_suffix, replace_value) {
+    let row_to_clone = document.getElementById(clone_row_id);
     let row_to_add = row_to_clone.cloneNode(true);
     let existing_row;
     let counter = 0;
@@ -25,7 +24,7 @@ function tfi_add_row(table_id, row_ids_suffix, replace_value) {
     // Replace all occurence of replace_value by the new counter
     row_to_add.innerHTML = row_to_add.innerHTML.split(replace_value).join(counter);
     row_to_add.removeAttribute("hidden");
-    table.insertBefore(row_to_add, row_to_clone);
+    row_to_clone.parentNode.insertBefore(row_to_add, row_to_clone);
 }
 
 /**
@@ -84,22 +83,22 @@ function tfi_hide_first_row_button() {
  * So it will display each parameters usefull and hide others
  *  
  * @since 1.1.0
+ * @since 1.2.2     Add the multiple row
+ * 
  * @param {HTML DOM Element} [field_type_select]      Represents the select element where the type is chosen
  */
 function tfi_change_type_param(field_type_select) {
     let type        = field_type_select.value;
-    let params_row   = document.getElementsByClassName(field_type_select.getAttribute("param-row"));
-    console.log( params_row );
+    let params_row  = document.getElementsByClassName(field_type_select.getAttribute("param-row"));
 
-    Array.from(params_row).forEach(function(param_row) {
-        Array.from(param_row.getElementsByClassName("special-param-wrapper")).forEach(function(element) {
-            if (element.getAttribute("field-type") == type) {
-                element.removeAttribute("hidden");
-            }
-            else {
-                element.setAttribute("hidden", true);
-            }
-        });
+    [].forEach.call(params_row, function(param_row) {
+        console.log(param_row);
+        if (param_row.getAttribute("field-type") == type) {
+            param_row.style.display = "";
+        }
+        else {
+            param_row.style.display = "none";
+        }
     });
 }
 
