@@ -53,28 +53,61 @@ class OptionsManager {
             'multiple' => 'Multiple'
         ),
         'tfi_fields' => array(
-            'facebook' => array(
-                'real_name' => 'Facebook',
-                'type' => 'link',
+            'links' => array(
+                'real_name' => 'My links',
+                'type' => 'multiple',
                 'default' => '',
                 'users' => array( 'default_type' ),
                 'special_params' => array(
-                    'mandatory_domains' => array(
-                        'facebook'
+                    'min_length' => 0,
+                    'max_length' => 3,
+                    'multiple_field' => array(
+                        'type' => 'link',
+                        'special_params' => array(
+                            'mandatory_domains' => array(
+                                'facebook.com',
+                                'twitter.com',
+                                'linkedin.com'
+                            )
+                        )
                     )
                 )
             ),
-            'twitter' => array(
-                'real_name' => 'Twitter',
-                'type' => 'link',
+            'description' => array(
+                'real_name' => 'Short description',
+                'type' => 'text',
+                'default' => '',
+                'users' => array( 'default_type' ),
+                'special_params' => array()
+            ),
+            'age' => array(
+                'real_name' => 'Age',
+                'type' => 'number',
                 'default' => '',
                 'users' => array( 'default_type' ),
                 'special_params' => array(
-                    'mandatory_domains' => array(
-                        'twitter'
-                    )
+                    'min' => 0,
+                    'max' => 200
                 )
-            )
+            ),
+            'favorite_color' => array(
+                'real_name' => 'Favorite color',
+                'type' => 'color',
+                'default' => '',
+                'users' => array( 'default_type' ),
+                'special_params' => array()
+            ),
+            'avatar' => array(
+                'real_name' => 'Avatar',
+                'type' => 'image',
+                'default' => '',
+                'users' => array( 'default_type' ),
+                'special_params' => array(
+                    'width' => 300,
+                    'height' => 300,
+                    'folder' => 'user_folder'
+                )
+            ) 
         ),
         'tfi_users' => array()
     );
@@ -447,15 +480,15 @@ class OptionsManager {
          * Multiple special params
          */
         else if ( $type === 'multiple' ) {
-            $sanitize_special_params['min'] = 1;
-            $sanitize_special_params['max'] = 0;
+            $sanitize_special_params['min_length'] = 1;
+            $sanitize_special_params['max_length'] = 0;
             $sanitize_special_params['multiple_field']['type'] = 'text';
 
-            if ( isset( $special_params['min'] ) && is_numeric( $special_params['min'] ) ) {
-                $sanitize_special_params['min'] = floor( abs( $special_params['min'] ) );
+            if ( isset( $special_params['min_length'] ) && is_numeric( $special_params['min_length'] ) ) {
+                $sanitize_special_params['min_length'] = floor( abs( $special_params['min_length'] ) );
             }
-            if ( isset( $special_params['max'] ) && is_numeric( $special_params['max'] ) ) {
-                $sanitize_special_params['max'] = floor( abs( $special_params['max'] ) );
+            if ( isset( $special_params['max_length'] ) && is_numeric( $special_params['max_length'] ) ) {
+                $sanitize_special_params['max_length'] = floor( abs( $special_params['max_length'] ) );
             }
             if ( isset( $special_params['multiple_field']['type'] ) && array_key_exists( $special_params['multiple_field']['type'], self::$default_options['tfi_field_types'] ) ) {
                 $sanitize_special_params['multiple_field']['type'] = $special_params['multiple_field']['type'];

@@ -828,7 +828,7 @@ class AdminPanelManager {
 				</div>
 			</div>
 		</td>
-		<?php foreach ( $user_types as $type_id => $name ): ?>
+		<?php foreach ( $user_types as $type_id => $display_name ): ?>
 		<td style="text-align: center;"><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'] ) ? 'checked ' : ''; ?>/></td>
 		<?php endforeach; ?>
 		<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-field-<?php echo esc_attr( $id ); ?>'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Remove field' ); ?></button></td>
@@ -883,14 +883,14 @@ class AdminPanelManager {
 			<input  type="number"
 					min="0"
 					name="<?php echo esc_attr( $name ); ?>[min_length]"
-					value="<?php echo esc_attr( $special_params['min'] ); ?>" />
+					value="<?php echo esc_attr( $special_params['min_length'] ); ?>" />
 		</div>
 		<div class="<?php echo esc_attr( $class ); ?>" field-type="multiple">
 			<label title="<?php esc_attr_e( 'The maximum length (no max if set to 0)' ); ?>"><?php esc_html_e( 'M:' ); ?></label>
 			<input  type="number"
 					min="0"
 					name="<?php echo esc_attr( $name ); ?>[max_length]"
-					value="<?php echo esc_attr( $special_params['max'] ); ?>" />
+					value="<?php echo esc_attr( $special_params['max_length'] ); ?>" />
 		</div>
 		<?php endif; ?>
 		<?php
