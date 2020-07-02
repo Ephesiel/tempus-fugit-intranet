@@ -47,14 +47,7 @@ class FieldSanitizor {
      * @return false    If an error occured (call FieldSanitizor::last_error() to have more information about the error)
      */
     public function sanitize_text_field( $text ) {
-        $sanitize = filter_var( stripslashes( $text ), FILTER_SANITIZE_STRING );
-
-        if ( ! empty( $sanitize ) ) {
-            return $sanitize;
-        }
-
-        $this->last_error = __( 'This value cannot be sanitized as a text' );
-        return false;
+        return filter_var( stripslashes( $text ), FILTER_SANITIZE_STRING );
     }
 
     /**

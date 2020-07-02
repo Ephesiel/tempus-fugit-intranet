@@ -61,14 +61,12 @@ class OptionsManager {
                 'special_params' => array(
                     'min_length' => 0,
                     'max_length' => 3,
-                    'multiple_field' => array(
-                        'type' => 'link',
-                        'special_params' => array(
-                            'mandatory_domains' => array(
-                                'facebook.com',
-                                'twitter.com',
-                                'linkedin.com'
-                            )
+                    'type' => 'link',
+                    'multiple_field_special_params' => array(
+                        'mandatory_domains' => array(
+                            'facebook.com',
+                            'twitter.com',
+                            'linkedin.com'
                         )
                     )
                 )
@@ -482,7 +480,7 @@ class OptionsManager {
         else if ( $type === 'multiple' ) {
             $sanitize_special_params['min_length'] = 1;
             $sanitize_special_params['max_length'] = 0;
-            $sanitize_special_params['multiple_field']['type'] = 'text';
+            $sanitize_special_params['type'] = 'text';
 
             if ( isset( $special_params['min_length'] ) && is_numeric( $special_params['min_length'] ) ) {
                 $sanitize_special_params['min_length'] = floor( abs( $special_params['min_length'] ) );
@@ -490,12 +488,12 @@ class OptionsManager {
             if ( isset( $special_params['max_length'] ) && is_numeric( $special_params['max_length'] ) ) {
                 $sanitize_special_params['max_length'] = floor( abs( $special_params['max_length'] ) );
             }
-            if ( isset( $special_params['multiple_field']['type'] ) && array_key_exists( $special_params['multiple_field']['type'], self::$default_options['tfi_field_types'] ) ) {
-                $sanitize_special_params['multiple_field']['type'] = $special_params['multiple_field']['type'];
+            if ( isset( $special_params['type'] ) && array_key_exists( $special_params['type'], self::$default_options['tfi_field_types'] ) ) {
+                $sanitize_special_params['type'] = $special_params['type'];
             }
 
-            $field_special_params = isset( $special_params['multiple_field']['special_params'] ) && is_array( $special_params['multiple_field']['special_params'] ) ? $special_params['multiple_field']['special_params'] : array();
-            $sanitize_special_params['multiple_field']['special_params'] = $this->verify_special_params( $sanitize_special_params['multiple_field']['type'], $field_special_params );
+            $field_special_params = isset( $special_params['multiple_field_special_params'] ) && is_array( $special_params['multiple_field_special_params'] ) ? $special_params['multiple_field_special_params'] : array();
+            $sanitize_special_params['multiple_field_special_params'] = $this->verify_special_params( $sanitize_special_params['type'], $field_special_params );
         }
 
         return $sanitize_special_params;

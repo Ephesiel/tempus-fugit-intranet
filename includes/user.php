@@ -162,7 +162,7 @@ class User {
 
             foreach ( tfi_get_option( 'tfi_fields' ) as $slug => $field ) {
                 if ( in_array( $this->user_type(), $field['users'] ) || in_array( $slug, $this->user_datas['special_fields'] ) ) {
-                    $allowed_fields[$slug] = new Field( $slug, $field['real_name'], $field['default'], $field['type'], $field['special_params'], $field['type'] == 'image' );
+                    $allowed_fields[$slug] = new Field( $slug, $field['real_name'], $field['default'], $field['type'], $field['special_params'] );
                 }
             }
             
@@ -176,54 +176,17 @@ class User {
     /**
      * Get_value_for_field.
      * 
-     * Return the value of the wanted field.
-     * It will verify if the user can access to this field
-     * Then, it will call user_db_datas and watch if the value exists on the array
-     * If it isn't, return the default value
-     * If the field is a file, return the url to display (images...) (or the path since 1.2.0)
+     * Alias for the Field::get_value_for_user
      * 
-     * @since 1.0.0
-     * @since 1.2.0     Add $url param
+     * @since 1.2.2
      * @access public
-     * 
-     * @param string    $field_slug
-     * @param string    $type           If the field is a file, you have multiple choice :
-     *                                      - 'real_url' (default)  : give you the url of the file (to display an image for example)
-     *                                      - 'absolute_path'       : give you the path for the file (usefull when move file)
-     *                                      - 'upload_path'         : give you the path from inside the upload dir (this is the database value)
-     * 
-     * @return mixed    The value of the field
-     * @return false    If not ok or if the field isn't allowed for this user
      */
     public function get_value_for_field( $field_slug, $type = 'real_url' ) {
         if ( ! $this->is_ok() || ! array_key_exists( $field_slug, $this->allowed_fields() ) ) {
-            return false;
+            return null;
         }
 
-        $field = $this->allowed_fields()[$field_slug];
-        $value = '';
-        
-        if ( array_key_exists( $field_slug, $this->user_db_datas() ) ) {
-            $value = $this->user_db_datas()[$field_slug];
-        }
-        
-        if ( empty( $value ) ) {
-            $value = $field->default_value;
-        }
-
-        if ( $field->is_file && ! empty( $value ) && $type !== 'upload_path' ) {
-            require_once TFI_PATH . 'includes/file-manager.php';
-            $file_manager = new FileManager;
-
-            if ( $type === 'absolute_path' ) {
-                $value = $file_manager->get_file_link( $value, false );
-            }
-            else {
-                $value = $file_manager->get_file_link( $value, true );
-            }
-        }
-
-        return $value;
+        return $this->allowed_fields()[$field_slug]->get_value_for_user( $this, $type );
     }
 
     /**
@@ -233,10 +196,12 @@ class User {
      * 
      * @since 1.0.0
      * @access public
-     * @param array $datas datas to send
-     * @param array $files all files to upload in the uploads folder. Default null
-     * @return array errors or success on upload datas.
-     * @return false if not ok or if datas sending failed
+     * 
+     * @param array $datas      Datas to send
+     * @param array $files      All files to upload in the uploads folder. Default null
+     * 
+     * @return array            Errors or success on upload datas.
+     * @return false            If not ok or if datas sending failed
      */
     public function send_new_datas( $datas, $files = null ) {
         if ( ! $this->is_ok() ) {
@@ -252,67 +217,45 @@ class User {
         $result = array();
 
         foreach ( $this->allowed_fields() as $field ) {
-            if ( isset( $datas[$field->name] ) ) {
-                $sanitation = false;
-                switch ( $field->type ) {
-                    case 'text':
-                        $sanitation = $field_sanitizor->sanitize_text_field( $datas[$field->name] );
-                    break;
-                    case 'link':
-                        $sanitation = $field_sanitizor->sanitize_link_field( $datas[$field->name], $field->special_params );
-                    break;
-                    case 'number':
-                        $sanitation = $field_sanitizor->sanitize_number_field( $datas[$field->name], $field->special_params );
-                    break;
-                    case 'color':
-                        $sanitation = $field_sanitizor->sanitize_color_field( $datas[$field->name] );
-                    break;
-                }
+            if ( $field->is_multiple() ) {
+                $is_data = isset( $datas[$field->name] );
+                $is_file = isset( $files[$field->name] );
+                $all = $is_data ? $datas[$field->name] : ( $is_file ? $files[$field->name] : array() );
 
-                if ( $sanitation === false ) {
-                    $result[$field->name]['tfi-error'] = $field_sanitizor->last_error();
+                if ( $is_data || $is_file ) {
+                    foreach ( $all as $index => $value ) {
+                        $child_field        = $field->get_field_for_index( $index );
+                        $sanitation_result;
+                        
+                        if ( $is_data ) {
+                            $sanitation_result  = $this->sanitize_non_file_data( $value, $child_field );
+                        }
+                        else {
+                            $sanitation_result  = $this->sanitize_file_data( $value, $child_field );
+                        }
+
+                        $result[$field->name][$index] = $sanitation_result['result'];
+                        if ( isset( $sanitation_result['change'] ) ) {
+                            $changes[$field->name][$index] = $sanitation_result['change'];
+                        }
+                        else {
+                            $changes[$field->name][$index] = $child_field->get_value_for_user( $this );
+                        }
+                    }
                 }
-                else if ( array_key_exists( $field->name, $this->user_db_datas() ) && $this->user_db_datas()[$field->name] === $sanitation ) {
-                    $result[$field->name]['tfi-info'] = __( 'No change' );
-                }
-                else {
-                    $changes[$field->name] = $sanitation;
-                    $result[$field->name]['tfi-success']  = __( 'This field has been successfully changed' );
+            }
+            else if ( isset( $datas[$field->name] ) ) {
+                $sanitation_result = $this->sanitize_non_file_data( $datas[$field->name], $field );
+                $result[$field->name] = $sanitation_result['result'];
+                if ( isset( $sanitation_result['change'] ) ) {
+                    $changes[$field->name] = $sanitation_result['change'];
                 }
             }
             else if ( isset( $files[$field->name] ) ) {
-                if ( $files[$field->name]['error'] !== 4 ) {
-                    $sanitation = false;
-                    switch ( $field->type ) {
-                        case 'image':
-                            $sanitation = $field_sanitizor->sanitize_post_file_field( $field, $files[$field->name], $this->id );
-                        break;
-                    }
-    
-                    if ( $sanitation === false ) {
-                        $result[$field->name]['tfi-error'] = $field_sanitizor->last_error();
-                    }
-                    else {
-                        $changes[$field->name] = $sanitation;
-
-                        $old_value = $this->get_value_for_field( $field->name, 'upload_path' );
-
-                        if ( $old_value !== '' ) {
-                            if ( ! $file_manager->remove_file( $old_value ) ) {
-                                $result[$field->name]['tfi-error'] = __( 'The old image failed to removed' );
-                            }
-                        }
-
-                        if ( ! $file_manager->upload_file( $files[$field->name]['tmp_name'], $sanitation ) ) {
-                            $result[$field->name]['tfi-error'] = __( 'Impossible to upload the new image' );
-                        }
-                        else {
-                            $result[$field->name]['tfi-success']  = __( 'This file has been uploaded with success' );
-                        }
-                    }
-                }
-                else {
-                    $result[$field->name]['tfi-info'] = __( 'No file given' );
+                $sanitation_result = $this->sanitize_file_data( $files[$field->name], $field );
+                $result[$field->name] = $sanitation_result['result'];
+                if ( isset( $sanitation_result['change'] ) ) {
+                    $changes[$field->name] = $sanitation_result['change'];
                 }
             }
         }
@@ -321,6 +264,110 @@ class User {
             return $result;
         }
         return false;
+    }
+
+    /**
+     * Sanitize_non_file_data.
+     * 
+     * Sanitize a data for a given field. Everything has been verify and all we need is to sanitize the value.
+     * 
+     * @since 1.2.2     Refactorization for multiple field
+     * @access private
+     * 
+     * @param string    $data       The value to sanitize for the given field
+     * @param Field     $field      The field for the value (it can be a field not set into User::allowed_fields())
+     * 
+     * @return array    'result' key is always set, to show message to the user
+     *                  'change' key is set when database need to be change with this value
+     */
+    private function sanitize_non_file_data( $data, $field ) {
+        $field_sanitizor    = new FieldSanitizor;
+        $sanitation         = false;
+
+        switch ( $field->type ) {
+            case 'text':
+                $sanitation = $field_sanitizor->sanitize_text_field( $data );
+            break;
+            case 'link':
+                $sanitation = $field_sanitizor->sanitize_link_field( $data, $field->special_params );
+            break;
+            case 'number':
+                $sanitation = $field_sanitizor->sanitize_number_field( $data, $field->special_params );
+            break;
+            case 'color':
+                $sanitation = $field_sanitizor->sanitize_color_field( $data );
+            break;
+        }
+
+        $old_value  = $field->get_value_for_user( $this ); 
+        $to_return  = array();
+
+        if ( $sanitation === false ) {
+            $to_return['result']['tfi-error'] = $field_sanitizor->last_error();
+        }
+        else if ( $old_value === $sanitation ) {
+            $to_return['result']['tfi-info'] = __( 'No change' );
+        }
+        else {
+            $to_return['change'] = $sanitation;
+            $to_return['result']['tfi-success']  = __( 'This field has been successfully changed' );
+        }
+
+        return $to_return;
+    }
+
+    /**
+     * Sanitize_file_data.
+     * 
+     * Sanitize a file for a given field. Everything has been verify and all we need is to sanitize the value.
+     * 
+     * @since 1.2.2     Refactorization for multiple field
+     * @access private
+     * 
+     * @param array     $file       The post array file to verify
+     * @param Field     $field      The field for the value (it can be a field not set into User::allowed_fields())
+     * 
+     * @return array    'result' key is always set, to show message to the user
+     *                  'change' key is set when database need to be change with this value
+     */
+    private function sanitize_file_data( $file, $field ) {
+        $to_return = array();
+
+        if ( $file['error'] === 4 ) {
+            $to_return['result']['tfi-info'] = __( 'No file given' );
+            return $to_return;
+        }
+
+        $field_sanitizor    = new FieldSanitizor;
+        $sanitation         = false;
+
+        switch ( $field->type ) {
+            case 'image':
+                $sanitation = $field_sanitizor->sanitize_post_file_field( $field, $file, $this->id );
+            break;
+        }
+
+        if ( $sanitation === false ) {
+            $to_return['result']['tfi-error'] = $field_sanitizor->last_error();
+            return $to_return;
+        }
+        
+        $file_manager           = new FileManager;
+        $to_return['change']    = $sanitation;
+        $old_value              = $field->get_value_for_user( $this, 'upload_path' ); 
+
+        if ( $old_value !== '' && ! $file_manager->remove_file( $old_value ) ) {
+            $to_return['result']['tfi-error'] = __( 'The old image failed to removed' );
+        }
+
+        if ( ! $file_manager->upload_file( $file['tmp_name'], $sanitation ) ) {
+            $to_return['result']['tfi-error'] = __( 'Impossible to upload the new image' );
+        }
+        else {
+            $to_return['result']['tfi-success'] = __( 'This file has been uploaded with success' );
+        }
+
+        return $to_return;
     }
 
     /**
@@ -360,12 +407,15 @@ class User {
      * If user_datas has already be called, just return the $user_datas class attribute
      * 
      * @since 1.0.0
-     * @access private
+     * @since 1.2.2     Access pass in public
+     * @access public
+     * 
      * @return array
      * @return false if not ok
-     * @global wpdb     $wpdb           The database object to drop the table
+     * 
+     * @global wpdb     $wpdb           The database object to get the datas
      */
-    private function user_db_datas() {
+    public function user_db_datas() {
         if ( ! $this->is_ok() ) {
             return false;
         }
@@ -404,16 +454,22 @@ class User {
     private function update_user_datas( $datas_to_changed ) {
         $old_user_datas = $this->user_db_datas();
         $new_user_datas = array_merge( $old_user_datas, $datas_to_changed );
-        if ( ! empty( array_diff_assoc( $new_user_datas, $old_user_datas ) ) ) {
+
+        if ( $old_user_datas !== $new_user_datas ) {
             global $wpdb;
             
             $db_result = $wpdb->update( $wpdb->prefix . TFI_TABLE, array( 'datas' => maybe_serialize( $new_user_datas ) ), array( 'user_id' => $this->id ), null, '%d' );
 
-            if ( $db_result === false ) {
+            /**
+             * If no row has been updates, it's a problem
+             */
+            if ( $db_result === false || $db_result === 0 ) {
                 return false;
             }
 
-            // The datas changed
+            /**
+             * Datas changed
+             */
             $this->user_datas['user_db_datas'] = $new_user_datas;
         }
 
@@ -425,20 +481,19 @@ class User {
         $values = array();
 
         foreach ( $datas_to_changed as $field_name => $change ) {
-            $changed_fields[$field_name]    = $this->allowed_fields()[$field_name];
-            $values[$field_name]            = $this->get_value_for_field( $field_name );
+            $changed_fields[$field_name] = $this->allowed_fields()[$field_name];
         }
 
         /**
          * When user datas has been changed, a filter is applying to allow post process
          * 
-         * @param int   $this->id           The id of the user whom datas has been modified
+         * @param User  $this               User whom datas has been modified
          * @param array $changed_fields     All Field objects which changed, keys are field_slug
-         * @param array $values             Values to display in html or to know the exact link for certain fields
          * 
          * @since 1.2.0
+         * @since 1.2.2     Return the user instead of the id, don't return values. 
          */
-        apply_filters( 'tfi_user_datas_changed', $this->id, $changed_fields, $values );
+        apply_filters( 'tfi_user_datas_changed', $this, $changed_fields );
 
         return true;
     }
@@ -451,32 +506,160 @@ class User {
  * 
  * @since 1.0.0
  * @since 1.1.0 Add $special_params attribute
+ * @since 1.2.2 Add $parent and $index attributes
  */
 class Field {
     public $name;
     public $display_name;
-    public $default_value;
     public $type;
     public $special_params;
-    public $is_file;
+    private $default_value;
+    private $parent;
+    private $index;
 
     /**
      * Field constructor
      * 
      * @since 1.0.0
-     * @param string $name              the field's slug 
-     * @param string $display_name      pretty name displayed on html
-     * @param string $default_value     the field's default
-     * @param string $type              the field's type (link, image, text...)
-     * @param array  $special_params    contains alla special params of a specific field
-     * @param bool   $is_file           is the value a filename which points to the path of the file in the upload folder. Default false.
+     * @param string    $name               The field's slug 
+     * @param string    $display_name       Pretty name displayed on html
+     * @param string    $default_value      The field's default
+     * @param string    $type               The field's type (link, image, text...)
+     * @param array     $special_params     Contains alla special params of a specific field
      */
-    public function __construct( $name, $display_name, $default_value, $type, $special_params, $is_file = false ) {
+    public function __construct( $name, $display_name, $default_value, $type, $special_params ) {
         $this->name             = $name;
         $this->display_name     = $display_name;
         $this->default_value    = $default_value;
         $this->type             = $type;
         $this->special_params   = $special_params;
-        $this->is_file          = $is_file;
+        $this->parent           = null;
+        $this->index            = -1;
+    }
+
+    public function is_file() {
+        return $this->type === 'image';
+    }
+
+    public function is_multiple() {
+        return $this->type === 'multiple';
+    }
+
+    /**
+     * Default_value.
+     * 
+     * Return the real default value, because multiple fields have a default value for their child.
+     * 
+     * @since 1.2.2
+     * @access public
+     * 
+     * @return mixed    The default value
+     */
+    public function default_value() {
+        return $this->is_multiple() ? array() : $this->default_value;
+    }
+
+    /**
+     * Get_field_for_index.
+     * 
+     * Return, for multiple field, a field object corresponding to the wanted index.
+     * 
+     * @since 1.2.2
+     * @access public
+     * 
+     * @param   int     $index  The wanted index for the new field
+     * @return  Field           The field created or $this if this is not a multiple field. 
+     */
+    public function get_field_for_index( $index ) {
+        if ( ! $this->is_multiple() ) {
+            return $this;
+        }
+
+        $index          = abs( $index );
+        $name           = $this->name . '_' . $index;
+        $display_name   = $this->display_name . ' - ' . $index;
+        $type           = $this->special_params['type'];
+        $default_value  = $this->default_value;
+        $special_params = $this->special_params['multiple_field_special_params'];
+
+        $field = new Field( $name ,$display_name, $default_value, $type, $special_params );
+        $field->parent = $this;
+        $field->index = $index;
+
+        return $field;
+    }
+
+    /**
+     * Get_value_for_user.
+     * 
+     * Return value for the wanted user or null if it's not possible.
+     * 
+     * @since 1.2.2     Move from User to Field
+     * @access public
+     * 
+     * @param   User    $user   The user to get value from
+     * @param   string  $type   If the field is a file, you have multiple choice :
+     *                              - 'real_url' (default)  : give you the url of the file (to display an image for example)
+     *                              - 'absolute_path'       : give you the path for the file (usefull when move file)
+     *                              - 'upload_path'         : give you the path from inside the upload dir (this is the database value)
+     * 
+     * @return  mixed           The value for this field and this user
+     * @return  null            If the user don't have any access
+     */
+    public function get_value_for_user( $user, $type = 'real_url'  ) {
+        $field   = $this;
+        $indexes = array();
+
+        /**
+         * Only the first parent is set into database (only multiple fields have parents).
+         * So the field needs to be a possible allowed fields for the user.
+         * Keep index to retrieve the value after.
+         */
+        while ( $field->parent !== null ) {
+            array_unshift( $indexes, $field->index );
+            $field = $field->parent;
+        }
+
+        if ( ! $user->is_ok() || ! array_key_exists( $field->name, $user->allowed_fields() ) ) {
+            return null;
+        }
+
+        $value;
+
+        if ( ! array_key_exists( $field->name, $user->user_db_datas() ) ) {
+            $value = $this->default_value();
+        }
+        else {
+            $value = $user->user_db_datas()[$field->name];
+            /**
+             * Loop on indexes to get the value.
+             */
+            foreach ( $indexes as $index ) {
+                if ( ! isset( $value[$index] ) ) {
+                    $value = $this->default_value();
+                    break;
+                }
+
+                $value = $value[$index];
+            }
+        }
+
+        /**
+         * Return the good string for a file (link, path, none etc...)
+         */
+        if ( $this->is_file() && ! empty( $value ) && $type !== 'upload_path' ) {
+            require_once TFI_PATH . 'includes/file-manager.php';
+            $file_manager = new FileManager;
+
+            if ( $type === 'absolute_path' ) {
+                $value = $file_manager->get_file_link( $value, false );
+            }
+            else {
+                $value = $file_manager->get_file_link( $value, true );
+            }
+        }
+
+        return $value;
+
     }
 }

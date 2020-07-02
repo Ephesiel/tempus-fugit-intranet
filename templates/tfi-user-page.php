@@ -38,6 +38,8 @@ $redirect_url = get_home_url();
         <footer id="tfi-user-page-footer">
             <small><?php printf( esc_html__( 'Page load by plugin %s' ), '<b>' . esc_html__( 'Tempus Fugit Intranet' ) . '</b>' ); ?></small>
         </footer>
+        <script type="text/javascript" src="<?php echo esc_attr( TFI_URL ) . '/assets/js/user-page.js'; ?>"></script>
+        <script type="text/javascript" src="<?php echo esc_attr( TFI_URL ) . '/assets/js/options.js'; ?>"></script>
         <script type="text/javascript" src="<?php echo get_stylesheet_directory_uri() . '/assets/js/parallax.js'; ?>"></script>
     </body>
 </html>

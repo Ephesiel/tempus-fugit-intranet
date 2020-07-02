@@ -123,6 +123,49 @@ footer {
     border: 1px dashed #ccd0d4;
 }
 
+#tfi-user-page-content .multiple-field-button {
+    color: #0071a1;
+    border-color: #0071a1;
+    background: #f3f5f6;
+    vertical-align: top;
+    display: inline-block;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 2.15384615;
+    min-height: 30px;
+    margin: 0;
+    padding: 0 10px;
+    cursor: pointer;
+    border-width: 1px;
+    border-style: solid;
+    -webkit-appearance: none;
+    border-radius: 3px;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+#tfi-user-page-content .multiple-field-button:hover {
+    background: #f1f1f1;
+    border-color: #016087;
+    color: #016087;
+}
+
+#tfi-user-page-content .multiple-field-button:active, #tfi-user-page-content .multiple-field-button:disabled {
+    background: #f3f5f6;
+    border-color: #7e8993;
+    color: #7e8993;
+    box-shadow: none;
+}
+
+#tfi-user-page-content .multiple-field-button:focus {
+    background: #f3f5f6;
+    border-color: #007cba;
+    color: #016087;
+    box-shadow: 0 0 0 1px #007cba;
+    outline: 2px solid transparent;
+    outline-offset: 0;
+}
+
 #tfi-user-page-content input[type=text] {
     padding: 0 8px;
     line-height: 2;

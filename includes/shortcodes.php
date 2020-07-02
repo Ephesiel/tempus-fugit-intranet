@@ -87,20 +87,24 @@ class ShortcodesManager {
 
         $this->user = new User( get_current_user_id() );
 
+        $posts = array_key_exists( 'tfi_update_user', $_POST ) ? $_POST['tfi_update_user'] : array();
+        $files = array_key_exists( 'tfi_update_user', $_FILES ) ? tfi_re_array_files( $_FILES['tfi_update_user'] ) : array();
+
+        /**
+         * Deletion of all number_to_replace keys which are the hidden rows
+         */
+        tfi_recursive_unset( $posts, 'number_to_replace' );
+        tfi_recursive_unset( $files, 'number_to_replace' );
+
         /**
          * Once the user is created, and if we have a tfi_update_user key on post datas
          * It means that a form has been send with new datas
          * 
          * Those datas will be send in the database.
          */
-        if ( $this->user->is_ok() && array_key_exists( 'tfi_update_user', $_POST ) ) {
+        if ( $this->user->is_ok() && ( ! empty( $posts ) || ! empty( $files ) ) ) {
             try {
-                if ( array_key_exists( 'tfi_update_user', $_FILES ) && ! empty( $_FILES['tfi_update_user'] ) ) {
-                    $this->database_result = $this->user->send_new_datas( $_POST['tfi_update_user'], tfi_re_array_files( $_FILES['tfi_update_user'] ) );
-                }
-                else {
-                    $this->database_result = $this->user->send_new_datas( $_POST['tfi_update_user'] );
-                }
+                $this->database_result = $this->user->send_new_datas( $posts, $files );
     
                 unset( $_POST['tfi_update_user'] );
                 unset( $_FILES['tfi_update_user'] );
@@ -137,7 +141,7 @@ class ShortcodesManager {
             return $this->get_error( 'not_register' );
         }
         if ( $this->database_result === false ) {
-            return $this->get_error( 'database_problem' );
+            $output .= $this->get_error( 'database_problem' );
         }
         if ( $this->fatal_error !== null ) {
             $output .= $this->get_error( 'fatal' );
@@ -176,7 +180,12 @@ class ShortcodesManager {
         $output .= '<form class="tfi-user-form" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" enctype="multipart/form-data" method="POST">';
         $output .=      '<table class="form-table">';
         foreach ( $user_fields as $field ) {
-            $output .= $this->add_field( $field, $atts );
+            if ( $field->is_multiple() ) {
+                $output .= $this->add_multiple_field( $field, $atts );
+            }
+            else {
+                $output .= $this->add_field( $field, $atts );
+            }
         }
         $output .=          '<tr><td><input type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '"></td></tr>';
         $output .=      '</table>';
@@ -236,9 +245,11 @@ class ShortcodesManager {
      * Those method should be called add_field_{FIELD_NAME}
      * 
      * @since 1.0.0
-     * @param Field $field the field to display
-     * @param array $atts attributes send by the shortcode. Default null.
-     * @return string the html content for the field
+     * @access private
+     * 
+     * @param   Field   $field  The field to display
+     * @param   array   $atts   Attributes send by the shortcode. Default null.
+     * @return  string          The html content for the field
      */
     private function add_field( $field, $atts = null ) {
         if ( ! method_exists( $this, 'add_field_' . $field->type ) ) {
@@ -268,13 +279,128 @@ class ShortcodesManager {
         return $o;
     }
 
+    /**
+     * Add_multiple_field.
+     * 
+     * Add all rows needed to display a multiple field.
+     * This is a method surch as the previous but much more long, adapted for multiple field.
+     * 
+     * @since 1.2.2
+     * @access private
+     * 
+     * @param   Field   $multiple_field     The field to display
+     * @param   array   $atts               Attributes send by the shortcode. Default null.
+     * @return  string                      The html content for the field
+     */
+    private function add_multiple_field( $multiple_field, $atts = null ) {
+        if ( ! method_exists( $this, 'add_field_' . $multiple_field->special_params['type'] ) ) {
+            return ''; 
+        }
+        $callback = array( $this, 'add_field_' . $multiple_field->special_params['type'] );
+
+        /**
+         * Number of field max and min
+         */
+        $max_length = $multiple_field->special_params['max_length'];
+        $min_length = $multiple_field->special_params['min_length'];
+        $max_length = $max_length > $min_length ? $max_length : 0;
+
+        $messages       = $this->database_result[$multiple_field->name];
+        $values         = $multiple_field->get_value_for_user( $this->user );
+        $number_field   = max( count( $values ), $min_length );
+        if ( $messages !== null ) {
+            /**
+             * When datas are sent, a message is get for every field.
+             * if a field have an error, it will display it.
+             * It avoid to hide bad values and allows user to see errors.
+             */
+            $number_field = max( count( $messages ), $number_field );
+        }
+
+
+        /**
+         * Some class variables
+         */
+        $element_class          = 'multiple-field-' . $multiple_field->name;
+        $remove_button_class    = 'remove-field-' . $multiple_field->name;
+        $add_button_class       = 'add-field-' . $multiple_field->name;
+
+        /**
+         * Disable function to put on remove and add button
+         */
+        $disabled_buttons_function  = 'tfi_set_disable_button(\'' . $max_length . '\', \'' . $min_length . '\', \'' . $element_class . '\', \'' . $add_button_class . '\', \'' . $remove_button_class . '\' )';
+
+        /**
+         * Some attribute values
+         */
+        $id_to_clone    = 'default-col-' . $multiple_field->name;
+        $id_suffix      = 'col-' . $multiple_field->name . '_';
+
+        $o = '<tr>';
+        $o.=    '<th scope="row">';
+        $o.=        '<label>';
+        $o.=            sprintf( $multiple_field->display_name . ' ' . esc_html__( '(min: %1$s, max: %2$s)' ), $min_length, $max_length != 0 ? $max_length : '&infin;' );
+        $o.=        '</label>';
+        $o.=    '</th>';
+        $o.=    '<td>';
+        $o.=        '<button';
+        $o.=            ' onclick="tfi_add_row(\'' . $id_to_clone . '\', \'' . $id_suffix . '\', \'number_to_replace\', \'' . $max_length . '\'); ' . $disabled_buttons_function . '"';
+        $o.=            ' class="multiple-field-button ' . $add_button_class . '"';
+        $o.=            ' type="button">';
+        $o.=                esc_html__( 'Add new value' );
+        $o.=        '</button>';
+        $o.=    '</td>';
+        $o.= '</tr>';
+        for ( $i = 0; $i <= $number_field; $i++ ) {
+            $field = $multiple_field->get_field_for_index( $i );
+            $field_form_name;
+            if ( $i != $number_field ) {
+                $field_form_name    = 'tfi_update_user[' . $multiple_field->name . '][' . $i . ']';
+            }
+            else {
+                $field_form_name    = 'tfi_update_user[' . $multiple_field->name . '][number_to_replace]';
+                $field->name        = $multiple_field->name . '-number_to_replace';
+            }
+
+            if ( $i == $number_field ) {
+            $o.= '<tr id="' . $id_to_clone . '" class="multiple-field ' . $element_class . '" hidden>';
+            } else {
+            $o.= '<tr id="' . $id_suffix . $i . '" class="multiple-field ' . $element_class . '">';
+            }
+            $o.=    '<td>';
+            $o.=        '<button';
+            $o.=            ' onclick="tfi_remove_row(\'col-' . $field->name . '\'); ' . $disabled_buttons_function . '"';
+            $o.=            ' class="multiple-field-button ' . $remove_button_class . '"';
+            $o.=            ' type="button">';
+            $o.=                esc_html__( 'Remove value' );
+            $o.=        '</button>';
+            $o.=    '</td>';
+            $o.=    '<td>';
+            $o.=        call_user_func( $callback, $field, $field_form_name );
+            if ( isset( $messages[$i] ) ) {
+                foreach ( $messages[$i] as $message_type => $message ) {
+                    $o .= $this->display_database_message( $message_type, $message );
+                }
+            }
+            $o.=    '</td>';
+            if ( isset( $atts['preview'] ) && $atts['preview'] && method_exists( $this, 'preview_field_' . $field->type ) ) {
+            $o.=    '<td class="preview">';
+            $o.=        call_user_func( array( $this, 'preview_field_' . $field->type ), $field );
+            $o.=    '</td>';
+            }
+            $o.= '</tr>';
+        }
+
+        return $o;
+    }
+
     private function add_field_link( $field, $field_form_name ) {
         $o = '<input';
         $o.=    ' type="text"';
         $o.=    ' id="' . esc_attr( $field->name ) .'"';
         $o.=    ' name="' . esc_attr( $field_form_name ) . '"';
-        $o.=    ' value="' . esc_attr( $this->user->get_value_for_field( $field->name ) ) . '"';
-        $o.=    ' placeholder="' . esc_attr( $field->default_value ) . '"';
+        $o.=    ' value="' . esc_attr( $field->get_value_for_user( $this->user ) ) . '"';
+        $o.=    ' placeholder="' . esc_attr( $field->default_value() ) . '"';
         $o.= ' />';
 
         return $o;
@@ -285,8 +411,8 @@ class ShortcodesManager {
         $o.=    ' type="text"';
         $o.=    ' id="' . esc_attr( $field->name ) .'"';
         $o.=    ' name="' . esc_attr( $field_form_name ) . '"';
-        $o.=    ' value="' . esc_attr( $this->user->get_value_for_field( $field->name ) ) . '"';
-        $o.=    ' placeholder="' . esc_attr( $field->default_value ) . '"';
+        $o.=    ' value="' . esc_attr( $field->get_value_for_user( $this->user ) ) . '"';
+        $o.=    ' placeholder="' . esc_attr( $field->default_value() ) . '"';
         $o.= ' />';
 
         return $o;
@@ -310,7 +436,7 @@ class ShortcodesManager {
         $o.=    ' type="number"';
         $o.=    ' id="' . esc_attr( $field->name ) .'"';
         $o.=    ' name="' . esc_attr( $field_form_name ) . '"';
-        $o.=    ' value="' . esc_attr( $this->user->get_value_for_field( $field->name ) ) . '"';
+        $o.=    ' value="' . esc_attr( $field->get_value_for_user( $this->user ) ) . '"';
         if ( $field->special_params['min'] < $field->special_params['max'] ) {
         $o.=    ' min="' . esc_attr( $field->special_params['min'] ) . '"';
         $o.=    ' max="' . esc_attr( $field->special_params['max'] ) . '"';
@@ -325,14 +451,14 @@ class ShortcodesManager {
         $o.=    ' type="color"';
         $o.=    ' id="' . esc_attr( $field->name ) .'"';
         $o.=    ' name="' . esc_attr( $field_form_name ) . '"';
-        $o.=    ' value="' . esc_attr( $this->user->get_value_for_field( $field->name ) ) . '"';
+        $o.=    ' value="' . esc_attr( $field->get_value_for_user( $this->user ) ) . '"';
         $o.= '/>';
 
         return $o;
     }
 
     private function preview_field_image( $field ) {
-        $src = $this->user->get_value_for_field( $field->name );
+        $src = $field->get_value_for_user( $this->user );
 
         if ( empty ( $src ) ) {
             return '';
@@ -346,11 +472,11 @@ class ShortcodesManager {
     }
 
     private function preview_field_link( $field ) {
-        $href = $this->user->get_value_for_field( $field->name );
+        $href = $field->get_value_for_user( $this->user );
         
         $o = '<div class="preview-link">';
         if ( ! empty ( $href ) ) {
-        $o.=    '<a href="' . esc_attr( $href ) . '">' . sprintf( esc_html__( 'My %s link' ), $field->display_name ) . '</a>';
+        $o.=    '<a href="' . esc_attr( $href ) . '">' . sprintf( esc_html__( '%s link' ), $field->display_name ) . '</a>';
         } else {
         $o.=    '<p>' . esc_html__( 'No link set yet' ) . '</p>';
         }
@@ -373,11 +499,17 @@ class ShortcodesManager {
 
         if ( isset( $this->database_result[$field->name] ) ) {
             foreach ( $this->database_result[$field->name] as $message_type => $message ) {
-                $html = '<div class ="tfi-message ' . esc_attr( $message_type ) . '"><small>';
-                $html.=     $message; 
-                $html.= '</small></div>';
+                $html .= $this->display_database_message( $message_type, $message );
             }
         }
+
+        return $html;
+    }
+
+    private function display_database_message( $message_type, $message ) {
+        $html = '<div class ="tfi-message ' . esc_attr( $message_type ) . '"><small>';
+        $html.=     $message; 
+        $html.= '</small></div>';
 
         return $html;
     }

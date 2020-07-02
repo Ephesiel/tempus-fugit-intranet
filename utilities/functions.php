@@ -122,8 +122,10 @@ if ( ! function_exists( 'tfi_re_array_files' ) ) {
      * Otherwise, it will do the opposite than wanted 
      * 
      * @since 1.0.0
-     * @param array $file_post The array of files given by $_FILES global variable
-     * @return array The same array but with reformated 
+     * @since 1.2.2     Add recursion for array of files
+     * 
+     * @param array     $file_post  The array of files given by $_FILES global variable
+     * @return array                The same array but with reformated 
      */
     function tfi_re_array_files( &$file_post ) {
         $file_ary = array();
@@ -132,6 +134,11 @@ if ( ! function_exists( 'tfi_re_array_files' ) ) {
         foreach ( $file_post['name'] as $file_name => $file_value ) {
             foreach ( $file_keys as $key ) {
                 $file_ary[$file_name][$key] = $file_post[$key][$file_name];
+            }
+        }
+        foreach ( $file_ary as $file_name => $values ) {
+            if ( is_array( $values['name'] ) ) {
+                $file_ary[$file_name] = tfi_re_array_files( $values );
             }
         }
 
@@ -285,5 +292,67 @@ if ( ! function_exists( 'tfi_array_merge_recursive_ex' ) ) {
         }
 
         return $merged;
+    }
+}
+
+if ( ! function_exists( 'tfi_recursive_unset' ) ) {
+    /**
+     * Tfi_recursive_unset.
+     * 
+     * Unset every unwanted_key of an arry recursively 
+     * 
+     * @since 1.2.2
+     * 
+     * @param array         $array          Reference of the array where the key need to be removed.
+     * @param array         $unwanted_key   The wanted key remove.
+     * 
+     * @author              soulmerge https://stackoverflow.com/questions/1708860/php-recursively-unset-array-keys-if-match
+     */
+    function tfi_recursive_unset( &$array, $unwanted_key ) {
+        unset( $array[$unwanted_key] );
+        foreach ( $array as &$value ) {
+            if ( is_array( $value ) ) {
+                tfi_recursive_unset( $value, $unwanted_key );
+            }
+        }
+    }
+}
+
+if ( ! function_exists( 'tfi_array_diff_assoc_recursive' ) ) {
+    /**
+     * Tfi_array_diff_assoc_recursive.
+     * 
+     * array_diff_assoc but in a recursive way 
+     * 
+     * @since 1.2.2
+     * 
+     * @param array         $array1     First array
+     * @param array         $array2     Second array
+     * 
+     * @return array        The diff between both of them, recursively
+     * 
+     * @author              tulik https://gist.github.com/tulik/30550e91c641c9a7564a407b691983ad
+     */
+    function tfi_array_diff_assoc_recursive( $array1, $array2 ) {
+        $difference = array();
+        
+        foreach ( $array1 as $key => $value ) {
+            if ( is_array( $value ) ) {
+                if ( ! isset( $array2[$key] ) || ! is_array( $array2[$key] ) ) {
+                    $difference[$key] = $value;
+                }
+                else {
+                    $new_diff = tfi_array_diff_assoc_recursive( $value, $array2[$key] );
+                    if ( ! empty( $new_diff ) ) {
+                        $difference[$key] = $new_diff;
+                    }
+                }
+            }
+            else if ( ! array_key_exists( $key, $array2 ) || $array2[$key] !== $value ) {
+                $difference[$key] = $value;
+            }
+        }
+        
+        return $difference;
     }
 }

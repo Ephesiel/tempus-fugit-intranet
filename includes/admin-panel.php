@@ -140,12 +140,14 @@ class AdminPanelManager {
 		/**
 		 * What we should do when options are updated
 		 * 
-		 * The tfi_users_datas need change when the tfi_users option changed
+		 * The tfi_users_datas need change when the tfi_users or tfi_fields options changed
 		 * (see the AdminPanelManager::update_users_datas header for more informations)
 		 * 
 		 * @since 1.0.0
+		 * @since 1.2.2		Add the hook when tfi_fields are changed because admin needed to reupdate users
 		 */
-		add_action( 'update_option_tfi_users', array( $this, 'update_users_datas' ), 10, 2 );
+		add_action( 'update_option_tfi_users', array( $this, 'update_users_datas' ), 10, 0 );
+		add_action( 'update_option_tfi_fields', array( $this, 'update_users_datas' ), 10, 0 );
 
 		/**
 		 * When tfi_fields change, the file folder can hav been changed
@@ -364,12 +366,12 @@ class AdminPanelManager {
                 /**
                  * This is the same value but inside a multiple fields
                  */
-                if ( isset( $field['special_params']['multiple_field']['special_params']['mandatory_domains'] ) ) {
+                if ( isset( $field['special_params']['multiple_field_special_params']['mandatory_domains'] ) ) {
                     $domains = array();
-                    foreach( explode( ',', $field['special_params']['multiple_field']['special_params']['mandatory_domains'] ) as $domain ) {
+                    foreach( explode( ',', $field['special_params']['multiple_field_special_params']['mandatory_domains'] ) as $domain ) {
                         $domains[] = $domain;
                     }
-                    $field['special_params']['multiple_field']['special_params']['mandatory_domains'] = $domains;
+                    $field['special_params']['multiple_field_special_params']['mandatory_domains'] = $domains;
                 }
 
                 $new_fields[$field['id']] = $field;
@@ -427,52 +429,65 @@ class AdminPanelManager {
 	/**
 	 * Update_users_datas.
 	 * 
-	 * This method is called when the tfi_users option has been updated
+	 * This method is called when the tfi_users or tfi_field options have been updated
 	 * It will add all new users in the tfi_datas table.
+	 * It will add all new fields allowed for each user with their default value.
 	 * 
 	 * This table will never delete any row except if this is asked by the admin (not implemented yet)
 	 * It allows to keep a cache of all datas if users and fields are deleted and then add again. 
 	 * 
 	 * @since 1.0.0
+	 * @since 1.2.2		Remove args and call this method when both options are changed
 	 * @access public
-	 * @param array $old_users contains The old values of tfi_users option
-	 * @param array $new_users contains The new values of tfi_users option
-     * @global wpdb $wpdb           	The database object to drop the table
+	 * 
+     * @global wpdb $wpdb	The database object to update users
 	 */
-	public function update_users_datas( $old_users, $new_users ) {
+	public function update_users_datas() {
 		global $wpdb;
 
 		$users_datas 	= $wpdb->get_results( "SELECT user_id, datas FROM " . $wpdb->prefix . TFI_TABLE, ARRAY_A );
 		$updated_datas	= array();
+		$users			= tfi_get_option( 'tfi_users' );
 
-		if ( ! empty( $new_users ) ) {
+		if ( ! empty( $users ) ) {
 			require_once TFI_PATH . 'includes/user.php';
 		}
 
-		foreach ( $new_users as $user_id => $user_datas ) {
+		foreach ( $users as $user_id => $user_datas ) {
 			$user = new User( $user_id );
 			if ( ! $user->is_ok() )
 				continue;
 
 			$user_datas = array();
+			$new_user 	= true;
 
+			/**
+			 * Get datas for this user
+			 */
 			foreach ( $users_datas as $value ) {
 				if ( $value['user_id'] == $user_id ) {
 					$user_datas = maybe_unserialize( $value['datas'] );
+					$new_user = false;
 					break;
 				}
 			}
 
 			$changed = false;
 
+			/**
+			 * If a new field has been allowed for this user, add it with the default value on the database
+			 */
 			foreach ( $user->allowed_fields() as $field ) {
 				if ( ! array_key_exists( $field->name, $user_datas ) ) {
-					$user_datas[$field->name] = $field->default_value;
+					$user_datas[$field->name] = $field->default_value();
 					$changed = true;
 				}
 			}
 
-			if ( $changed ) {
+			/**
+			 * Even without any datas a new user need to be inserted
+			 */
+			if ( $new_user || $changed ) {
 				$updated_datas[] = '(' . $user_id . ', \'' . maybe_serialize( $user_datas ) . '\')';
 			}
 		}
@@ -751,24 +766,25 @@ class AdminPanelManager {
 			'width' => 0,
 			'min' => 0,
 			'max' => 0,
-			'min_length' => 0,
-			'max_length' => 0,
 			'mandatory_domains' => array(),
 			'folder' => OptionsManager::get_parent_file_folder_slug()
 		);
 
+		$default_single_params = array(
+			'min_length' => 0,
+			'max_length' => 0,
+			'type' => 'text'
+		);
+
 		$default_multiple_fields = array(
-			'multiple_field' => array(
-				'type' => 'text',
-				'special_params' => $default_special_params
-			)
+			'multiple_field_special_params' => $default_special_params
 		);
 
 		$default_datas = array(
 			'real_name' => __( 'New field' ),
 			'type' => 'text',
 			'default' => '',
-			'special_params' => array_merge( $default_special_params, $default_multiple_fields ),
+			'special_params' => array_merge( $default_special_params, $default_single_params, $default_multiple_fields ),
 			'users' => array()
 		);
 
@@ -789,10 +805,10 @@ class AdminPanelManager {
 					</select>
 				</div>
 				<div class="<?php echo esc_attr( $param_class ); ?>" field-type="multiple" >
-					<select onchange="tfi_change_type_param(this)" class="field-type-select" name="<?php echo esc_attr( $name ); ?>[special_params][multiple_field][type]" param-row="<?php echo esc_attr( $param_multiple_class ); ?>">
+					<select onchange="tfi_change_type_param(this)" class="field-type-select" name="<?php echo esc_attr( $name ); ?>[special_params][type]" param-row="<?php echo esc_attr( $param_multiple_class ); ?>">
 						<?php foreach ( $field_types as $type_id => $display_name ):
 						if ( $type_id != 'multiple' ): ?>
-						<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['special_params']['multiple_field']['type'] ? 'selected' : ''; ?>><?php esc_html_e( $display_name ); ?></option>
+						<option value="<?php echo esc_attr( $type_id ); ?>" <?php echo $type_id == $datas['special_params']['type'] ? 'selected' : ''; ?>><?php esc_html_e( $display_name ); ?></option>
 						<?php endif;
 						endforeach; ?>
 					</select>
@@ -806,7 +822,7 @@ class AdminPanelManager {
 					<?php $this->display_special_params( $id, $datas['special_params'], false ); ?>
 				</div>
 				<div class="param-fields <?php echo esc_attr( $param_class ); ?>" field-type="multiple">
-					<?php $this->display_special_params( $id, $datas['special_params']['multiple_field']['special_params'], true ); ?>
+					<?php $this->display_special_params( $id, $datas['special_params']['multiple_field_special_params'], true ); ?>
 				</div>
 			</div>
 		</td>
@@ -822,7 +838,7 @@ class AdminPanelManager {
 				<div class="<?php echo esc_attr( $param_multiple_class ); ?>" field-type="image">
 					<select name="<?php echo esc_attr( $name ); ?>[special_params][multiple_field][special_params][folder]">
 						<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
-						<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo $select_folder_slug == $datas['special_params']['multiple_field']['special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
+						<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo $select_folder_slug == $datas['special_params']['multiple_field_special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</div>
@@ -840,7 +856,7 @@ class AdminPanelManager {
 		$name = 'tfi_fields[' . $id . '][special_params]';
 		$class = 'param-fields-' . $id;
 		if ( $multiple ) {
-			$name .= '[multiple_field][special_params]';
+			$name .= '[multiple_field_special_params]';
 			$class = 'param-fields-multiple-' . $id;
 		}
 		?>
