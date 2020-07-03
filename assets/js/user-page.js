@@ -22,7 +22,6 @@ function tfi_set_disable_button(max, min, class_element, class_to_disable_on_max
     let add_buttons = document.getElementsByClassName(class_to_disable_on_max);
 
     if (length <= min) {
-        console.log(class_to_disable_on_min);
         [].forEach.call(remove_buttons, function(element) {
             element.setAttribute("disabled", true);
         });
@@ -33,21 +32,24 @@ function tfi_set_disable_button(max, min, class_element, class_to_disable_on_max
         });
     }
 
-    if ( length >= max ) {
-        [].forEach.call(add_buttons, function(element) {
-            element.setAttribute("disabled", true);
-        });
-    }
-    else {
-        [].forEach.call(add_buttons, function(element) {
-            element.removeAttribute("disabled");
-        });
+    // When max = 0, it means infinite
+    if (max != 0) {
+        if (length >= max) {
+            [].forEach.call(add_buttons, function(element) {
+                element.setAttribute("disabled", true);
+            });
+        }
+        else {
+            [].forEach.call(add_buttons, function(element) {
+                element.removeAttribute("disabled");
+            });
+        }
     }
 }
 
 window.addEventListener("DOMContentLoaded", function(event) {
 
-    Array.from(document.getElementsByClassName("multiple-field-row")).forEach(function(element) {
+    Array.from(document.getElementsByClassName("multiple-field-first-row")).forEach(function(element) {
         let max             = element.getAttribute('data-max');
         let min             = element.getAttribute('data-min');
         let element_class   = element.getAttribute('element-class');

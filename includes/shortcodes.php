@@ -366,7 +366,7 @@ class ShortcodesManager {
         $id_to_clone    = 'default-col-' . $multiple_field->name;
         $id_suffix      = 'col-' . $multiple_field->name . '_';
 
-        $o = '<tr class="multiple-field-row" data-max="' . $max_length . '" data-min="' . $min_length . '" element-class="' . $element_class . '" button-add-class="' . $add_button_class . '" button-remove-class="' . $remove_button_class . '">';
+        $o = '<tr class="multiple-field-first-row" data-max="' . $max_length . '" data-min="' . $min_length . '" element-class="' . $element_class . '" button-add-class="' . $add_button_class . '" button-remove-class="' . $remove_button_class . '">';
         $o.=    '<th scope="row">';
         $o.=        '<label>';
         $o.=            sprintf( $multiple_field->display_name . ' ' . esc_html__( '(min: %1$s, max: %2$s)' ), $min_length, $max_length != 0 ? $max_length : '&infin;' );

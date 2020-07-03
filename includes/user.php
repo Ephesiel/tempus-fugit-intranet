@@ -225,7 +225,14 @@ class User {
                 $max        = $field->special_params['max_length'];
                 $last_index = 0;
 
-                if ( $is_data || $is_file ) {
+                /**
+                 * If there is no datas, it can be because the user want to remove all fields.
+                 * It should be possible, so the $changes var need to be updated to change the array on the database.
+                 */
+                if ( empty( $all ) ) {
+                    $changes[$field->name] = $field->default_value();
+                }
+                else {
                     /**
                      * We transform the array, it needs to have sorted ascending key
                      */
@@ -250,24 +257,24 @@ class User {
                             $changes[$field->name][$index] = $child_field->get_value_for_user( $this );
                         }
                     }
+                }
 
-                    /**
-                     * Once the loop end, if we don't have enough value, add default one
-                     */
-                    if ( $last_index < $min ) {
-                        for ( $i = $last_index; $i < $min; $i++ ) {
-                            $changes[$field->name][$i] = $field->get_field_for_index( $i )->default_value();
-                            $result[$field->name][$i]['tfi-warning'] = __( 'Minimum number of values required' );
-                        }
+                /**
+                 * Once the loop end, if we don't have enough value, add default one
+                 */
+                if ( $last_index < $min ) {
+                    for ( $i = $last_index; $i < $min; $i++ ) {
+                        $changes[$field->name][$i] = $field->get_field_for_index( $i )->default_value();
+                        $result[$field->name][$i]['tfi-warning'] = __( 'Minimum number of values required' );
                     }
-                    /**
-                     * If we have too much values, we delete the lasts
-                     */
-                    else if ( $max !== 0 && $last_index > $max ) {
-                        for ( $i = $last_index - 1; $i >= $max; $i-- ) {
-                            unset( $changes[$field->name][$i] );
-                            unset( $result[$field->name][$i] );
-                        }
+                }
+                /**
+                 * If we have too much values, we delete the lasts
+                 */
+                else if ( $max !== 0 && $last_index > $max ) {
+                    for ( $i = $last_index - 1; $i >= $max; $i-- ) {
+                        unset( $changes[$field->name][$i] );
+                        unset( $result[$field->name][$i] );
                     }
                 }
             }
