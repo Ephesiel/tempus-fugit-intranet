@@ -610,8 +610,8 @@ class ShortcodesManager {
     }
 
     private function error_different_fields_version() {
-        $e = esc_html__( 'A new version for fields have been set' ) . '<br />';
-        $e.= esc_html__( 'Please re-submit the form or close this page to remove this error' );
+        $e = esc_html__( 'Some fields of your form have been changed by an administrator' ) . '<br />';
+        $e.= esc_html__( 'Please re-submit the form or close this page to remove this message' );
 
         return $e;
     }
