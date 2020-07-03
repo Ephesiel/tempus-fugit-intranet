@@ -47,7 +47,7 @@ class FieldSanitizor {
      * @return false    If an error occured (call FieldSanitizor::last_error() to have more information about the error)
      */
     public function sanitize_text_field( $text ) {
-        return filter_var( stripslashes( $text ), FILTER_SANITIZE_STRING );
+        return stripslashes( filter_var( $text, FILTER_SANITIZE_STRING ) );
     }
 
     /**

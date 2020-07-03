@@ -29,7 +29,7 @@ if ( ! function_exists( 'tfi_get_users_which_have_field' ) ) {
     /**
      * Tfi_get_users_which_have_field.
      * 
-     * Get all wordpress users which are allowed to user a specific field.
+     * Get all wordpress users which are allowed to use a specific field.
      * 
      * @since 1.1.1
      * @param string $field_slug    The wanted field.
@@ -72,6 +72,9 @@ if ( ! function_exists( 'tfi_get_option' ) ) {
             break;
             case 'tfi_user_page':
                 $default = -1;
+            break;
+            case 'tfi_fields_version':
+                $default = 0;
             break;
             case 'tfi_shortcut':
                 $default = array(

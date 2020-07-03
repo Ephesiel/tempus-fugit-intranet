@@ -152,8 +152,21 @@ class AdminPanelManager {
 		/**
 		 * When tfi_fields change, the file folder can hav been changed
 		 * If this is the case, we move existing files to the new folder.
+		 * 
+		 * @since 1.2.0
 		 */
 		add_action( 'update_option_tfi_fields', array( $this, 'update_file_folders' ), 10, 2 );
+
+		/**
+		 * Verify values for each users for changed fields
+		 * 
+		 * Before implementation of multiple field, all values were strings.
+		 * Since 1.2.2, values can be array or string according to if the field is multiple or not.
+		 * If the type of a field change, the value inside database need to change too, else, it can produce errors when datas are used
+		 * 
+		 * @since 1.2.3
+		 */
+		add_action( 'update_option_tfi_fields', array( $this, 'update_users_datas_type' ), 10, 2 );
 
 		/**
 		 * All sections and subsections to display on the option page
@@ -429,7 +442,7 @@ class AdminPanelManager {
 	/**
 	 * Update_users_datas.
 	 * 
-	 * This method is called when the tfi_users or tfi_field options have been updated
+	 * This method is called when the tfi_users or tfi_fields options have been updated
 	 * It will add all new users in the tfi_datas table.
 	 * It will add all new fields allowed for each user with their default value.
 	 * 
@@ -511,8 +524,9 @@ class AdminPanelManager {
 	 * 
 	 * @since 1.2.0
 	 * @access public
-	 * @param array $old_fields contains The old values of tfi_users option
-	 * @param array $new_fields contains The new values of tfi_users option
+	 * 
+	 * @param array $old_fields contains The old values of tfi_fields option
+	 * @param array $new_fields contains The new values of tfi_fields option
 	 */
 	public function update_file_folders( $old_fields, $new_fields ) {
 		if ( ! defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
@@ -585,6 +599,80 @@ class AdminPanelManager {
 				foreach ( $changed_fields[$user->id] as $field_slug => $paths ) {
 					rename( $paths['old'], $paths['new'] );
 				}
+			}
+		}
+	}
+
+	/**
+	 * Update_users_datas_type.
+	 * 
+	 * This method is called when tfi_fields option has been updated
+	 * It will change users database values for fields which changed from multiple to simple or the opposite.
+	 * 
+	 * @since 1.2.3
+	 * @access public
+	 * 
+	 * @param array $old_fields contains The old values of tfi_fields option
+	 * @param array $new_fields contains The new values of tfi_fields option
+	 */
+	public function update_users_datas_type( $old_fields, $new_fields ) {
+		$new_simple_fields = array();
+		$new_multiple_fields = array();
+
+		foreach( $new_fields as $new_field_slug => $new_field_datas ) {
+			/**
+			 * If the key already exists in the old key, it's easy to verify if the value need change.
+			 */
+			if ( array_key_exists( $new_field_slug, $old_fields ) ) {
+				$old_field_datas = $old_fields[$new_field_slug];
+
+				if ( $old_field_datas['type'] === 'multiple' && $new_field_datas['type'] !== 'multiple' ) {
+					$new_simple_fields[] = $new_field_slug;
+				}
+				else if ( $old_field_datas['type'] !== 'multiple' && $new_field_datas['type'] === 'multiple' ) {
+					$new_multiple_fields[] = $new_field_slug;
+				}
+			}
+			/**
+			 * If the key is a new one, we need to verify it for each user to be sure that values have the good type.
+			 */
+			else {
+				if ( $new_field_datas['type'] !== 'multiple' ) {
+					$new_simple_fields[] = $new_field_slug;
+				}
+				else if ( $new_field_datas['type'] === 'multiple' ) {
+					$new_multiple_fields[] = $new_field_slug;
+				}
+			}
+		}
+
+		foreach ( tfi_get_users() as $wp_user ) {
+			$user = new User( $wp_user->ID );
+			$changes = array();
+
+			/**
+			 * We get the value in database directly because even if the user don't have the right to access it anymore the value is kept and eventually needs to be change !
+			 */
+			foreach ( $user->user_db_datas() as $field_slug => $field_value ) {
+				/**
+				 * When the value was an array for a single field
+				 * Place the first value of the old array as new value
+				 */
+				if ( in_array( $field_slug, $new_simple_fields ) && ! is_string( $field_value ) ) {
+					$value = array_shift( $field_value );
+					$changes[$field_slug] = $value !== null ? $value : '';
+				}
+				/**
+				 * When the value was a string for a multiple field
+				 * Replace the value by an array with the first value equal to the old value
+				 */
+				else if ( in_array( $field_slug, $new_multiple_fields ) && ! is_array( $field_value ) ) {
+					$changes[$field_slug] = array( $field_value );
+				}
+			}
+
+			if ( ! empty( $changes ) ) {
+				$user->set_values_for_fields( $changes );
 			}
 		}
 	}

@@ -21,6 +21,7 @@ class OptionsManager {
      * @since 1.1.3     Add tfi_file_folders option
      * @since 1.2.1     Add 'number' and 'color' field types
      * @since 1.2.2     Add 'multiple' field types
+     * @since 1.2.3     Add tfi_fields_version option
      * 
      * @static
      * @access private
@@ -52,6 +53,7 @@ class OptionsManager {
             'color' => 'Color',
             'multiple' => 'Multiple'
         ),
+        'tfi_fields_version' => 0,
         'tfi_fields' => array(
             'links' => array(
                 'real_name' => 'My links',
@@ -401,6 +403,15 @@ class OptionsManager {
             $new_fields[$sanitize_field_slug] = $sanitize_field_value;
         }
 
+        /**
+         * If fields changed, the version is increased.
+         * Allows the user page post data to not send if the version is different
+         */
+        $fields_version = tfi_get_option( 'tfi_fields_version' );
+        if ( $new_fields !== tfi_get_option( 'tfi_fields' ) ) {
+            update_option( 'tfi_fields_version', $fields_version + 1 );
+        }
+
         return $new_fields;
     }
 
@@ -574,6 +585,25 @@ class OptionsManager {
      */
     private function verify_field_types( $field_types ) {
         return self::$default_options['tfi_field_types'];
+    }
+
+    /**
+     * Verify_fields_version.
+     * 
+     * This option is here to check the current version of fields
+     * It's increment at each tfi_fields option update
+     * 
+     * @since 1.2.3
+     * @access private
+     * 
+     * @param int $fields_version   the actual field version
+     * @return int                  $fields_version sanitized
+     */
+    private function verify_fields_version( $fields_version ) {
+        if ( ! is_int( $fields_version ) ) {
+            return self::$default_options['tfi_fields_version'];
+        }
+        return abs( $fields_version );
     }
 
     /**

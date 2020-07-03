@@ -25,4 +25,4 @@ if ( $upload_dir['error'] === false ) {
 	define( 'TFI_UPLOAD_FOLDER_URL', $upload_dir['baseurl'] . '/tempus_fugit_files' );
 }
 
-define( 'TFI_VERSION', '1.2.2' );
+define( 'TFI_VERSION', '1.2.3' );

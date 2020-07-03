@@ -42,6 +42,9 @@ Intranet to allow every students to add their own datas at home whitout passing 
 = 1.2.2 =
 * Add multiple fields type
 
+= 1.2.3 =
+* Some fixes
+
 == How to use ==
 
 = After installation =

@@ -50,6 +50,18 @@ class ShortcodesManager {
      */
     private $fatal_error;
 
+    /**
+     * Different_fields_version.
+     * 
+     * Set to true if fields have been updated, and post datas are still here
+     * 
+     * @since 1.2.3
+     * @access private
+     * 
+     * @var true|null
+     */
+    private $different_fields_version;
+
 	/**
 	 * ShortcodesManager constructor.
 	 *
@@ -91,7 +103,7 @@ class ShortcodesManager {
         $files = array_key_exists( 'tfi_update_user', $_FILES ) ? tfi_re_array_files( $_FILES['tfi_update_user'] ) : array();
 
         /**
-         * Deletion of all number_to_replace keys which are the hidden rows
+         * Deletion of all number_to_replace keys which are hidden rows
          */
         tfi_recursive_unset( $posts, 'number_to_replace' );
         tfi_recursive_unset( $files, 'number_to_replace' );
@@ -103,14 +115,16 @@ class ShortcodesManager {
          * Those datas will be send in the database.
          */
         if ( $this->user->is_ok() && ( ! empty( $posts ) || ! empty( $files ) ) ) {
-            try {
-                $this->database_result = $this->user->send_new_datas( $posts, $files );
-    
-                unset( $_POST['tfi_update_user'] );
-                unset( $_FILES['tfi_update_user'] );
+            if ( array_key_exists( 'tfi_fields_version', $_POST ) && $_POST['tfi_fields_version'] != tfi_get_option( 'tfi_fields_version' ) ) {
+                $this->different_fields_version = true;
             }
-            catch( \Exception $e ) {
-                $this->fatal_error = $e->getMessage();
+            else {
+                try {
+                    $this->database_result = $this->user->send_new_datas( $posts, $files );
+                }
+                catch( \Exception $e ) {
+                    $this->fatal_error = $e->getMessage();
+                }
             }
         }
     }
@@ -140,6 +154,9 @@ class ShortcodesManager {
 
         if ( ! $this->user->is_ok() ) {
             return $this->get_error( 'not_register' );
+        }
+        if ( $this->different_fields_version === true ) {
+            $output .= $this->get_error( 'different_fields_version' );
         }
         if ( $this->database_result === false ) {
             $output .= $this->get_error( 'database_problem' );
@@ -176,8 +193,9 @@ class ShortcodesManager {
                 $output .= $this->add_field( $field, $atts );
             }
         }
-        $output .=          '<tr><td><input type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '"></td></tr>';
+        $output .=          '<tr><td><input type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '" /></td></tr>';
         $output .=      '</table>';
+        $output .=       '<input type="hidden" name="tfi_fields_version" value="' . esc_attr__( tfi_get_option( 'tfi_fields_version' ) ) . '" />';
         $output .= '</form>';
 
         return $output;
@@ -587,6 +605,13 @@ class ShortcodesManager {
         $e = '<b>' . esc_html( __( 'Fatal error:' ) ) . '</b> ' . esc_html( $this->fatal_error ) . '<br/>';
         $e.= esc_html__( 'A fatal error is an unexpected, unwanted error which is not due to your for most cases. Please try again and if the error still appear, contact your support.' ) . '<br />';
         $e.= esc_html__( 'You should consider that your datas are not saved.' );
+
+        return $e;
+    }
+
+    private function error_different_fields_version() {
+        $e = esc_html__( 'A new version for fields have been set' ) . '<br />';
+        $e.= esc_html__( 'Please re-submit the form or close this page to remove this error' );
 
         return $e;
     }
