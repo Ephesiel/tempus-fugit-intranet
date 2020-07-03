@@ -6,17 +6,12 @@
  * Clones this template and change ids and names
  *  
  * @since 1.0.0
- * @since 1.2.2     Add max parameters
  * 
  * @param {string}  [clone_row_id]      The id of the hidden row to clone
  * @param {string}  [row_ids_suffix]    The string to put before the id (the id is a number)
  * @param {string}  [replace_value]     The given value will be changed by the new id (without the suffix) everywhere inside the new row
- * @param {int}     [max]               If there is a maximum row number. 0 = infinite. Default = 0
  */
-function tfi_add_row(clone_row_id, row_ids_suffix, replace_value, max = 0) {
-    if ( max != 0 && document.querySelectorAll('[id^=' + row_ids_suffix + ']').length >= max ) {
-        return;
-    }
+function tfi_add_row(clone_row_id, row_ids_suffix, replace_value) {
     let row_to_clone = document.getElementById(clone_row_id);
     let row_to_add = row_to_clone.cloneNode(true);
     let existing_row;

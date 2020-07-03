@@ -265,7 +265,7 @@ class ShortcodesManager {
         $o.=            esc_html__( $field->display_name );
         $o.=        '</label>';
         $o.=    '</th>';
-        $o.=    '<td>';
+        $o.=    '<td colspan="2">';
         $o.=        call_user_func( $callback, $field, $field_form_name );
         $o.=        $this->get_database_message( $field );
         $o.=    '</td>';
@@ -305,10 +305,18 @@ class ShortcodesManager {
         $min_length = $multiple_field->special_params['min_length'];
         $max_length = $max_length > $min_length ? $max_length : 0;
 
-        $messages       = $this->database_result[$multiple_field->name];
+        $messages       = isset( $this->database_result[$multiple_field->name] ) ? $this->database_result[$multiple_field->name] : array();
         $values         = $multiple_field->get_value_for_user( $this->user );
-        $number_field   = max( count( $values ), $min_length );
-        if ( $messages !== null ) {
+        $number_field   = $min_length;
+        if ( count( $values ) > 0 ) {
+            /**
+             * Values are stored in 0, 1, 2 ... keys in the values' array.
+             * We get the value according to the index, so, to be sure to have all values, we want at least last key number of row 
+             * The last key is the highest, because rows are displayed in croissant order (so send like that in post datas)
+             */
+            $number_field = max( array_key_last( $values ) + 1, $number_field );
+        }
+        if ( ! empty( $messages ) ) {
             /**
              * When datas are sent, a message is get for every field.
              * if a field have an error, it will display it.
@@ -336,7 +344,7 @@ class ShortcodesManager {
         $id_to_clone    = 'default-col-' . $multiple_field->name;
         $id_suffix      = 'col-' . $multiple_field->name . '_';
 
-        $o = '<tr>';
+        $o = '<tr class="multiple-field-row" data-max="' . $max_length . '" data-min="' . $min_length . '" element-class="' . $element_class . '" button-add-class="' . $add_button_class . '" button-remove-class="' . $remove_button_class . '">';
         $o.=    '<th scope="row">';
         $o.=        '<label>';
         $o.=            sprintf( $multiple_field->display_name . ' ' . esc_html__( '(min: %1$s, max: %2$s)' ), $min_length, $max_length != 0 ? $max_length : '&infin;' );
@@ -344,7 +352,7 @@ class ShortcodesManager {
         $o.=    '</th>';
         $o.=    '<td>';
         $o.=        '<button';
-        $o.=            ' onclick="tfi_add_row(\'' . $id_to_clone . '\', \'' . $id_suffix . '\', \'number_to_replace\', \'' . $max_length . '\'); ' . $disabled_buttons_function . '"';
+        $o.=            ' onclick="tfi_add_row(\'' . $id_to_clone . '\', \'' . $id_suffix . '\', \'number_to_replace\'); ' . $disabled_buttons_function . '"';
         $o.=            ' class="multiple-field-button ' . $add_button_class . '"';
         $o.=            ' type="button">';
         $o.=                esc_html__( 'Add new value' );
@@ -358,8 +366,9 @@ class ShortcodesManager {
                 $field_form_name    = 'tfi_update_user[' . $multiple_field->name . '][' . $i . ']';
             }
             else {
-                $field_form_name    = 'tfi_update_user[' . $multiple_field->name . '][number_to_replace]';
-                $field->name        = $multiple_field->name . '-number_to_replace';
+                $field_form_name        = 'tfi_update_user[' . $multiple_field->name . '][number_to_replace]';
+                $field->name            = $multiple_field->name . '_number_to_replace';
+                $field->display_name    = $multiple_field->display_name . ' - number_to_replace';
             }
 
             if ( $i == $number_field ) {
@@ -368,12 +377,9 @@ class ShortcodesManager {
             $o.= '<tr id="' . $id_suffix . $i . '" class="multiple-field ' . $element_class . '">';
             }
             $o.=    '<td>';
-            $o.=        '<button';
-            $o.=            ' onclick="tfi_remove_row(\'col-' . $field->name . '\'); ' . $disabled_buttons_function . '"';
-            $o.=            ' class="multiple-field-button ' . $remove_button_class . '"';
-            $o.=            ' type="button">';
-            $o.=                esc_html__( 'Remove value' );
-            $o.=        '</button>';
+            $o.=        '<label for="' . $field->name . '">';
+            $o.=            $field->display_name;
+            $o.=        '</label>';
             $o.=    '</td>';
             $o.=    '<td>';
             $o.=        call_user_func( $callback, $field, $field_form_name );
@@ -382,6 +388,14 @@ class ShortcodesManager {
                     $o .= $this->display_database_message( $message_type, $message );
                 }
             }
+            $o.=    '</td>';
+            $o.=    '<td>';
+            $o.=        '<button';
+            $o.=            ' onclick="tfi_remove_row(\'col-' . $field->name . '\'); ' . $disabled_buttons_function . '"';
+            $o.=            ' class="multiple-field-button ' . $remove_button_class . '"';
+            $o.=            ' type="button">';
+            $o.=                esc_html__( 'Remove value' );
+            $o.=        '</button>';
             $o.=    '</td>';
             if ( isset( $atts['preview'] ) && $atts['preview'] && method_exists( $this, 'preview_field_' . $field->type ) ) {
             $o.=    '<td class="preview">';

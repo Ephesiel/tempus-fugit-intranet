@@ -39,6 +39,9 @@ Intranet to allow every students to add their own datas at home whitout passing 
 = 1.2.1 =
 * Add color and number field types
 
+= 1.2.2 =
+* Add multiple fields type
+
 == How to use ==
 
 = After installation =

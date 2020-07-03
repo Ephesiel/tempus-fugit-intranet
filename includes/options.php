@@ -478,7 +478,7 @@ class OptionsManager {
          * Multiple special params
          */
         else if ( $type === 'multiple' ) {
-            $sanitize_special_params['min_length'] = 1;
+            $sanitize_special_params['min_length'] = 0;
             $sanitize_special_params['max_length'] = 0;
             $sanitize_special_params['type'] = 'text';
 
@@ -487,6 +487,10 @@ class OptionsManager {
             }
             if ( isset( $special_params['max_length'] ) && is_numeric( $special_params['max_length'] ) ) {
                 $sanitize_special_params['max_length'] = floor( abs( $special_params['max_length'] ) );
+            }
+            if ( $sanitize_special_params['max_length'] < $sanitize_special_params['min_length'] ) {
+                $sanitize_special_params['min_length'] = 0;
+                $sanitize_special_params['max_length'] = 0;
             }
             if ( isset( $special_params['type'] ) && array_key_exists( $special_params['type'], self::$default_options['tfi_field_types'] ) ) {
                 $sanitize_special_params['type'] = $special_params['type'];

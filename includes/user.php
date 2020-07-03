@@ -218,13 +218,21 @@ class User {
 
         foreach ( $this->allowed_fields() as $field ) {
             if ( $field->is_multiple() ) {
-                $is_data = isset( $datas[$field->name] );
-                $is_file = isset( $files[$field->name] );
-                $all = $is_data ? $datas[$field->name] : ( $is_file ? $files[$field->name] : array() );
+                $is_data    = isset( $datas[$field->name] );
+                $is_file    = isset( $files[$field->name] );
+                $all        = $is_data ? $datas[$field->name] : ( $is_file ? $files[$field->name] : array() );
+                $min        = $field->special_params['min_length'];
+                $max        = $field->special_params['max_length'];
+                $last_index = 0;
 
                 if ( $is_data || $is_file ) {
-                    foreach ( $all as $index => $value ) {
-                        $child_field        = $field->get_field_for_index( $index );
+                    /**
+                     * We transform the array, it needs to have sorted ascending key
+                     */
+                    foreach ( array_values( $all ) as $index => $value ) {
+                        $last_index++;
+
+                        $child_field = $field->get_field_for_index( $index );
                         $sanitation_result;
                         
                         if ( $is_data ) {
@@ -240,6 +248,25 @@ class User {
                         }
                         else {
                             $changes[$field->name][$index] = $child_field->get_value_for_user( $this );
+                        }
+                    }
+
+                    /**
+                     * Once the loop end, if we don't have enough value, add default one
+                     */
+                    if ( $last_index < $min ) {
+                        for ( $i = $last_index; $i < $min; $i++ ) {
+                            $changes[$field->name][$i] = $field->get_field_for_index( $i )->default_value();
+                            $result[$field->name][$i]['tfi-warning'] = __( 'Minimum number of values required' );
+                        }
+                    }
+                    /**
+                     * If we have too much values, we delete the lasts
+                     */
+                    else if ( $max !== 0 && $last_index > $max ) {
+                        for ( $i = $last_index - 1; $i >= $max; $i-- ) {
+                            unset( $changes[$field->name][$i] );
+                            unset( $result[$field->name][$i] );
                         }
                     }
                 }

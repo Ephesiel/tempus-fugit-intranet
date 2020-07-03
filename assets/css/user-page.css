@@ -256,6 +256,10 @@ footer {
     color: rgb(24, 131, 194);
 }
 
+#tfi-user-page-content .tfi-warning {
+    color: rgb(192, 133, 24);
+}
+
 #tfi-user-page-content .tfi-error {
     color: rgb(209, 41, 41);
 }
