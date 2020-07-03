@@ -126,6 +126,7 @@ class ShortcodesManager {
      *      -   fields  => string   => Fields to display in the form, separate by comma.
      *      -   prefixs => string   => Prefixs separate by comma. all fields which begin by one of those prefix will be display on the form.
      *      -   suffixs => string   => Same ad 'prefixs' but with suffixs
+     *      -   not-*   => string   => fields, prefixs or suffixs, will not take fields with those values
      * 
      * If none of the three last arguments are set, all fields will be displayed
      * 
@@ -153,28 +154,16 @@ class ShortcodesManager {
             $fields = array_key_exists( 'fields', $atts ) ? explode( ',', $atts['fields'] ) : array();
             $prefixs = array_key_exists( 'prefixs', $atts ) ? explode( ',', $atts['prefixs'] ) : array();
             $suffixs = array_key_exists( 'suffixs', $atts ) ? explode( ',', $atts['suffixs'] ) : array();
+            $user_fields = $this->change_fields( $user_fields, $fields, $prefixs, $suffixs );
+        }
 
-            $witness = $user_fields;
-            $user_fields = array();
+        if ( array_key_exists( 'not-fields', $atts ) || array_key_exists( 'not-prefixs', $atts ) || array_key_exists( 'not-suffixs', $atts ) ) {
+            $fields = array_key_exists( 'not-fields', $atts ) ? explode( ',', $atts['not-fields'] ) : array();
+            $prefixs = array_key_exists( 'not-prefixs', $atts ) ? explode( ',', $atts['not-prefixs'] ) : array();
+            $suffixs = array_key_exists( 'not-suffixs', $atts ) ? explode( ',', $atts['not-suffixs'] ) : array();
+            $fields_to_remove = $this->change_fields( $user_fields, $fields, $prefixs, $suffixs );
 
-            foreach ( $witness as $field_slug => $field_value ) {
-                if ( in_array( $field_slug, $fields ) ) {
-                    $user_fields[$field_slug] = $field_value;
-                    continue;
-                }
-                foreach ( $prefixs as $prefix ) {
-                    if ( strpos( $field_slug, $prefix ) === 0 ) {
-                        $user_fields[$field_slug] = $field_value;
-                        break;
-                    }
-                }
-                foreach ( $suffixs as $suffix ) {
-                    if ( strrpos( $field_slug, $suffix ) === strlen( $field_slug ) - strlen( $suffix ) ) {
-                        $user_fields[$field_slug] = $field_value;
-                        break;
-                    }
-                }
-            }
+            $user_fields = array_diff_key( $user_fields, $fields_to_remove );
         }
 
         $output .= '<form class="tfi-user-form" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" enctype="multipart/form-data" method="POST">';
@@ -192,6 +181,39 @@ class ShortcodesManager {
         $output .= '</form>';
 
         return $output;
+    }
+
+    /**
+     * Change_fields.
+     * 
+     * Factorisation to do this verification on tfi_user_form shotcode with normal and not-* attributes.
+     * 
+     * @since 1.2.2
+     * @access private
+     */
+    private function change_fields( $fields_to_look_at, $required_fields, $prefixs, $suffixs ) {
+        $to_return = array();
+
+        foreach ( $fields_to_look_at as $field_slug => $field_value ) {
+            if ( in_array( $field_slug, $required_fields ) ) {
+                $to_return[$field_slug] = $field_value;
+                continue;
+            }
+            foreach ( $prefixs as $prefix ) {
+                if ( strpos( $field_slug, $prefix ) === 0 ) {
+                    $to_return[$field_slug] = $field_value;
+                    break;
+                }
+            }
+            foreach ( $suffixs as $suffix ) {
+                if ( strrpos( $field_slug, $suffix ) === strlen( $field_slug ) - strlen( $suffix ) ) {
+                    $to_return[$field_slug] = $field_value;
+                    break;
+                }
+            }
+        }
+
+        return $to_return;
     }
 
     /**
