@@ -949,14 +949,14 @@ class AdminPanelManager {
 		}
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
-			<label title="<?php esc_attr_e( 'The maximum height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
+			<label title="<?php esc_attr_e( 'The mandatory height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
 			<input  type="number"
 					min="0"
 					name="<?php echo esc_attr( $name ); ?>[height]"
 					value="<?php echo esc_attr( $special_params['height'] ); ?>" />
 		</div>
 		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
-			<label title="<?php esc_attr_e( 'The maximum width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
+			<label title="<?php esc_attr_e( 'The mandatory width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
 			<input  type="number"
 					min="0"
 					name="<?php echo esc_attr( $name ); ?>[width]"
