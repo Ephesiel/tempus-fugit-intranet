@@ -924,7 +924,7 @@ class AdminPanelManager {
 			</div>
 			<div class="<?php echo esc_attr( $param_class ); ?>" field-type="multiple">
 				<div class="<?php echo esc_attr( $param_multiple_class ); ?>" field-type="image">
-					<select name="<?php echo esc_attr( $name ); ?>[special_params][multiple_field][special_params][folder]">
+					<select name="<?php echo esc_attr( $name ); ?>[special_params][multiple_field_special_params][folder]">
 						<?php foreach ( $folders as $select_folder_slug => $select_folder ): ?>
 						<option value="<?php echo esc_attr( $select_folder_slug ); ?>" <?php echo $select_folder_slug == $datas['special_params']['multiple_field_special_params']['folder'] ? 'selected' : ''; ?>><?php esc_html_e( $select_folder['display_name'] ); ?></option>
 						<?php endforeach; ?>
