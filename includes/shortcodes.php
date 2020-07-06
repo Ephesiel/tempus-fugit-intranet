@@ -343,7 +343,6 @@ class ShortcodesManager {
          */
         $max_length = $multiple_field->special_params['max_length'];
         $min_length = $multiple_field->special_params['min_length'];
-        $max_length = $max_length > $min_length ? $max_length : 0;
 
         $messages       = isset( $this->database_result[$multiple_field->name] ) ? $this->database_result[$multiple_field->name] : array();
         $values         = $multiple_field->get_value_for_user( $this->user );

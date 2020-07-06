@@ -55,6 +55,7 @@ window.addEventListener("DOMContentLoaded", function(event) {
         let element_class   = element.getAttribute('element-class');
         let add_class       = element.getAttribute('button-add-class');
         let remove_class    = element.getAttribute('button-remove-class');
+        console.log( max, min, element_class, add_class, remove_class );
         tfi_set_disable_button( max, min, element_class, add_class, remove_class );
     });
 });
