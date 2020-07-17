@@ -227,11 +227,18 @@ class User {
                 $last_index = 0;
 
                 /**
+                 * This bool is use to know if the array have changed or not
+                 * If just one value changed, it will pass to true and all the array will be push into database (it's manadatory to not lose old values)
+                 */
+                $changed = false;
+
+                /**
                  * If there is no datas, it can be because the user want to remove all fields.
                  * It should be possible, so the $changes var need to be updated to change the array on the database.
                  */
-                if ( empty( $all ) ) {
+                if ( empty( $all ) && ! empty( $this->get_value_for_field( $field->name ) ) ) {
                     $changes[$field->name] = $field->default_value();
+                    $changed = true;
                 }
                 else {
                     /**
@@ -252,6 +259,10 @@ class User {
 
                         $result[$field->name][$index] = $sanitation_result['result'];
                         if ( isset( $sanitation_result['change'] ) ) {
+                            /**
+                             * If one value change, we need to keep all the array to push it into the database
+                             */
+                            $changed = true;
                             $changes[$field->name][$index] = $sanitation_result['change'];
                         }
                         else {
@@ -260,9 +271,7 @@ class User {
                             /**
                              * If we don't set the old value, the key will missing to the new array and the old value risk to be deleted in database
                              */
-                            if ( $old_value != '' ) {
-                                $changes[$field->name][$index] = $old_value;
-                            }
+                            $changes[$field->name][$index] = $old_value;
                         }
                     }
                 }
@@ -275,6 +284,8 @@ class User {
                         $changes[$field->name][$i] = $field->get_field_for_index( $i )->default_value();
                         $result[$field->name][$i]['tfi-warning'] = __( 'Minimum number of values required' );
                     }
+
+                    $changed = true;
                 }
                 /**
                  * If we have too much values, we delete the lasts
@@ -284,6 +295,16 @@ class User {
                         unset( $changes[$field->name][$i] );
                         unset( $result[$field->name][$i] );
                     }
+
+                    $changed = true;
+                }
+
+                /**
+                 * If this variable is false, it means that no changes occured in the field.
+                 * So we don't need to push it in the database
+                 */
+                if ( ! $changed ) {
+                    unset( $changes[$field->name] );
                 }
             }
             else if ( isset( $datas[$field->name] ) ) {
@@ -302,9 +323,14 @@ class User {
             }
         }
 
+        if ( empty( $changes ) ) {
+            return array();   
+        }
+
         if ( $this->update_user_datas( $changes ) ) {
             return $result;
         }
+
         return false;
     }
 
@@ -514,7 +540,6 @@ class User {
          * So every datas send in this method will be send to the user_datas_changed hook
          */
         $changed_fields = array();
-        $values = array();
 
         foreach ( $datas_to_changed as $field_name => $change ) {
             $changed_fields[$field_name] = $this->allowed_fields()[$field_name];

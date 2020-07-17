@@ -64,7 +64,19 @@ class Field {
      * @return mixed    The default value
      */
     public function default_value() {
-        return $this->is_multiple() ? array() : $this->default_value;
+        if ( ! $this->is_multiple() ) {
+            return $this->default_value;
+        }
+
+        $result = array();
+
+        if ( isset( $this->special_params['min_length'] ) ) {
+            for ( $i = 0; $i < $this->special_params['min_length']; $i++ ) {
+                $result[] = $this->get_field_for_index( $i )->default_value();
+            }
+        }
+
+        return $result;
     }
 
     /**

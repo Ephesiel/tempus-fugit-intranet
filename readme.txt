@@ -45,6 +45,9 @@ Intranet to allow every students to add their own datas at home whitout passing 
 = 1.2.3 =
 * Some fixes
 
+= 1.2.4 =
+* Multiple fields are not send when the value didn't change
+
 == How to use ==
 
 = After installation =
