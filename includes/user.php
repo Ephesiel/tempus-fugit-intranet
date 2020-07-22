@@ -41,7 +41,7 @@ class User {
      * User_datas.
      * 
      * Contains everything about the user.
-     * This is a cache to avois multiple calls to database
+     * This is a cache to avoid multiple calls to database
      * This is false if the user isn't register in the tfi_users option
      * 
      * @since 1.0.0
@@ -49,7 +49,20 @@ class User {
      * 
      * @var array|false
      */
-    private $user_datas;
+    private $cache;
+
+    /**
+     * Current_echo_template.
+     * 
+     * The template used for echo datas
+     * 
+     * @since 1.3.0
+     * @access private
+     * 
+     * @var Template
+     * @var null
+     */
+    private $current_echo_template;
 
 	/**
 	 * User constructor.
@@ -64,9 +77,10 @@ class User {
         $this->id           = $user_id;
         $this->is_allowed   = get_user_by( 'id', $user_id );
         if ( $this->is_allowed !== false ) {
-            $this->is_allowed->has_cap( 'access_intranet' );
+            $this->is_allowed = $this->is_allowed->has_cap( 'access_intranet' );
         }
-        $this->user_datas   = array_key_exists( $user_id, $users ) ? $users[$user_id] : false;
+        $this->cache   = array_key_exists( $user_id, $users ) ? $users[$user_id] : false;
+        $this->current_echo_template = null;
     }
 
     /**
@@ -92,7 +106,7 @@ class User {
      * @return bool
      */
     public function is_register() {
-        return $this->user_datas !== false ;
+        return $this->cache !== false ;
     }
 
     /**
@@ -106,6 +120,95 @@ class User {
      */
     public function is_ok() {
         return $this->is_register() && $this->has_intranet_access();
+    }
+
+    /**
+     * Set_current_echo_template.
+     * 
+     * Setter for the template to use for datas.
+     * 
+     * @since 1.3.0
+     * @access public
+     * @param int   $template_id   The id of the template where echo's datas will be store or get
+     */
+    public function set_current_echo_template( $template_id ) {
+        foreach ( $this->get_echo_templates() as $template ) {
+            if ( $template->id == $template_id ) {
+                $this->current_echo_template = $template;
+                break;
+            }
+        }
+    }
+
+    /**
+     * Get_current_echo_template.
+     * 
+     * Getter for the template to use for datas.
+     * 
+     * @since 1.3.0
+     * @access public
+     * @return Template
+     */
+    public function get_current_echo_template() {
+        return $this->current_echo_template === null ? $this->get_echo_templates()[0] : $this->current_echo_template;
+    }
+
+    /**
+     * Get_echo_templates.
+     * 
+     * Getter for all existing templates
+     * 
+     * @since 1.3.0
+     * @access public
+     * @return array
+     */
+    public function get_echo_templates() {
+        if ( ! $this->is_ok() ) {
+            return false;
+        }
+
+        if ( ! array_key_exists( 'echo_templates', $this->cache ) ) {
+            require_once TFI_PATH . 'includes/echo/echo-api.php';
+
+            $templates = Api::get()->get_templates_for_user();
+
+            if ( $templates !== false ) {
+                $this->cache['echo_templates'] = $templates;
+            } else {
+                wp_die( 'impossible to get templates - error : ' . Api::get()->last_error );
+            }
+        }
+
+        return $this->cache['echo_templates'];
+    }
+
+    /**
+     * Get_echo_campains.
+     * 
+     * Getter for all existing campains
+     * 
+     * @since 1.3.0
+     * @access public
+     * @return array
+     */
+    public function get_echo_campains() {
+        if ( ! $this->is_ok() ) {
+            return false;
+        }
+
+        if ( ! array_key_exists( 'echo_campains', $this->cache ) ) {
+            require_once TFI_PATH . 'includes/echo/echo-api.php';
+
+            $campains = Api::get()->get_campains_for_user();
+
+            if ( $campains !== false ) {
+                $this->cache['echo_campains'] = $campains;
+            } else {
+                wp_die( 'impossible to get campains - error : ' . Api::get()->last_error );
+            }
+        }
+
+        return $this->cache['echo_campains'];
     }
 
     /**
@@ -123,21 +226,21 @@ class User {
             return false;
         }
 
-        if ( ! array_key_exists( 'checked_user_type', $this->user_datas ) ) {
+        if ( ! array_key_exists( 'checked_user_type', $this->cache ) ) {
             $user_types = tfi_get_option( 'tfi_user_types' );
 
-            if ( ! array_key_exists( $this->user_datas['user_type'], $user_types ) ) {
-                $this->user_datas['checked_user_type'] = array_key_first( $user_types );
+            if ( ! array_key_exists( $this->cache['user_type'], $user_types ) ) {
+                $this->cache['checked_user_type'] = array_key_first( $user_types );
             }
             else {
-                $this->user_datas['checked_user_type'] = $this->user_datas['user_type'];
+                $this->cache['checked_user_type'] = $this->cache['user_type'];
             }
 
-            unset( $this->user_datas['user_type'] );
+            unset( $this->cache['user_type'] );
                 
         }
 
-        return $this->user_datas['checked_user_type'];
+        return $this->cache['checked_user_type'];
     }
 
     /**
@@ -157,21 +260,21 @@ class User {
             return false;
         }
 
-        if ( ! array_key_exists( 'allowed_fields', $this->user_datas ) ) {
+        if ( ! array_key_exists( 'allowed_fields', $this->cache ) ) {
             require_once TFI_PATH . 'includes/field.php';
             $allowed_fields = array();
 
             foreach ( tfi_get_option( 'tfi_fields' ) as $slug => $field ) {
-                if ( in_array( $this->user_type(), $field['users'] ) || in_array( $slug, $this->user_datas['special_fields'] ) ) {
+                if ( in_array( $this->user_type(), $field['users'] ) || in_array( $slug, $this->cache['special_fields'] ) ) {
                     $allowed_fields[$slug] = new Field( $slug, $field['real_name'], $field['default'], $field['type'], $field['special_params'] );
                 }
             }
             
-            unset( $this->user_datas['special_fields'] );
-            $this->user_datas['allowed_fields'] = $allowed_fields;
+            unset( $this->cache['special_fields'] );
+            $this->cache['allowed_fields'] = $allowed_fields;
         }
 
-        return $this->user_datas['allowed_fields'];
+        return $this->cache['allowed_fields'];
     }
 
     /**
@@ -321,10 +424,26 @@ class User {
                     $changes[$field->name] = $sanitation_result['change'];
                 }
             }
+
+            /**
+             * When this is an echo field, we need to create an array with the actual template as key
+             * It allows to keep every template separated 
+             */
+            if ( isset( $changes[$field->name] ) && $field->is_echo_field() ) {
+                $temp = $changes[$field->name];
+                $changes[$field->name] = $this->user_db_datas()[$field->name];
+                /**
+                 * This is used when old echo's values are set in database but are not array
+                 */
+                if ( ! is_array( $changes[$field->name] ) ) {
+                    unset( $changes[$field->name] );
+                }
+                $changes[$field->name][$this->get_current_echo_template()->pretty_id()] = $temp;
+            }
         }
 
         if ( empty( $changes ) ) {
-            return array();   
+            return $result;   
         }
 
         if ( $this->update_user_datas( $changes ) ) {
@@ -410,7 +529,7 @@ class User {
 
         switch ( $field->type ) {
             case 'image':
-                $sanitation = $field_sanitizor->sanitize_post_file_field( $field, $file, $this->id );
+                $sanitation = $field_sanitizor->sanitize_post_file_field( $field, $file, $this );
             break;
         }
 
@@ -466,7 +585,7 @@ class User {
      * 
      * Return the user datas from database.
      * Those datas are stored in the database so one call will be done only if needed
-     * If user_datas has already be called, just return the $user_datas class attribute
+     * If user_datas has already be called, just return the $cache class attribute
      * 
      * @since 1.0.0
      * @since 1.2.2     Access pass in public
@@ -482,21 +601,21 @@ class User {
             return false;
         }
 
-        if ( ! array_key_exists( 'user_db_datas', $this->user_datas ) ) {
+        if ( ! array_key_exists( 'user_db_datas', $this->cache ) ) {
             global $wpdb;
     
             $result = $wpdb->get_var( "SELECT datas FROM " . $wpdb->prefix . TFI_TABLE . " WHERE user_id = " . $this->id );
             
             // If the result is null, it means that there is no user_id with this id in the database
             if ( $result === null ) {
-                $this->user_datas['user_db_datas'] = array();
+                $this->cache['user_db_datas'] = array();
             }
             else {
-                $this->user_datas['user_db_datas'] = maybe_unserialize( $result );
+                $this->cache['user_db_datas'] = maybe_unserialize( $result );
             }
         }
 
-        return $this->user_datas['user_db_datas'];
+        return $this->cache['user_db_datas'];
     }
 
     /**
@@ -532,7 +651,7 @@ class User {
             /**
              * Datas changed
              */
-            $this->user_datas['user_db_datas'] = $new_user_datas;
+            $this->cache['user_db_datas'] = $new_user_datas;
         }
 
         /**

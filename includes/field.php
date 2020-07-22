@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @since 1.0.0
  * @since 1.1.0 Add $special_params attribute
  * @since 1.2.2 Add $parent and $index attributes
+ * @since 1.3.0 Handle echo field with templates 
  */
 class Field {
     public $name;
@@ -53,6 +54,10 @@ class Field {
         return $this->type === 'multiple';
     }
 
+    public function is_echo_field() {
+        return strpos( $this->name, 'echo_' ) === 0;
+    }
+
     /**
      * Default_value.
      * 
@@ -77,6 +82,64 @@ class Field {
         }
 
         return $result;
+    }
+
+    /**
+     * Create_default_value.
+     * 
+     * Return the default value to be created
+     * This differ than default_value() because it needs to add every echo field as an array with a default template value 
+     * 
+     * @since 1.3.0
+     * @access public
+     * 
+     * @return mixed    The default value to insert in database
+     */
+    public function create_default_value() {
+        $value = $this->default_value();
+
+        if ( $this->is_echo_field() ) {
+            $value = array( $value );
+        }
+
+        return $value;
+    }
+
+    /**
+     * Get_folder_path_from_user.
+     * 
+     * @since 1.3.0
+     * @access public
+     * 
+     * @param User  $user       The user to verify path from. If this is an echo field, it will get the user current template to add it to the path
+     * @param bool  $absolute   If set to false, give the path form TFI_UPLOAD_FOLDER_DIR, if set to true, return an absolute path. Default true.
+     * 
+     * @return false If there is no folder for this field or if the folder can't be established
+     * @return string The folder path for this field
+     */
+    public function get_folder_path_from_user( $user, $absolute = true ) {
+        if ( ! isset( $this->special_params['folder'] ) ) {
+            return false;
+        }
+
+        $folder_path = tfi_get_user_file_folder_path( $user->id, $this->special_params['folder'], $absolute );
+
+        if ( $folder_path === false ) {
+            return false;
+        }
+
+        /**
+         * If this is a echo field, the template is had after the echo folder
+         */
+        if ( $this->is_echo_field() ) {
+            $echo_path = tfi_get_user_file_folder_path( $user->id, 'echo', $absolute );
+
+            if ( strpos( $folder_path, $echo_path . '/' ) === 0 || $folder_path === $echo_path ) {
+                $folder_path = $echo_path . '/' . $user->get_current_echo_template()->campain . '/' . $user->get_current_echo_template()->pretty_id() . substr( $folder_path, strlen( $echo_path ) );
+            }
+        }
+
+        return $folder_path;
     }
 
     /**
@@ -140,6 +203,10 @@ class Field {
             $field = $field->parent;
         }
 
+        if ( $this->is_echo_field() ) {
+            array_unshift( $indexes, $user->get_current_echo_template()->pretty_id() );
+        }
+
         if ( ! $user->is_ok() || ! array_key_exists( $field->name, $user->allowed_fields() ) ) {
             return null;
         }
@@ -180,6 +247,5 @@ class Field {
         }
 
         return $value;
-
     }
 }

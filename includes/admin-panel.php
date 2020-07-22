@@ -492,7 +492,7 @@ class AdminPanelManager {
 			 */
 			foreach ( $user->allowed_fields() as $field ) {
 				if ( ! array_key_exists( $field->name, $user_datas ) ) {
-					$user_datas[$field->name] = $field->default_value();
+					$user_datas[$field->name] = $field->create_default_value();
 					$changed = true;
 				}
 			}
@@ -556,6 +556,7 @@ class AdminPanelManager {
 					else {
 						$user = new User( $wp_user->ID );
 					}
+					$field = $user->allowed_fields()[$field_slug];
 
 					$old_path 	= $user->get_value_for_field( $field_slug, 'absolute_path' );
 					if ( ! file_exists( $old_path ) ) {
@@ -567,7 +568,7 @@ class AdminPanelManager {
 					 * The upload dir is the directory where values are saved in database, it means the directory inside the TFI_UPLOAD_FOLDER_DIR
 					 * The local dir is the absolute path, we use it to rename the file later
 					 */
-					$upload_dir	= tfi_get_user_file_folder_path( $wp_user->ID, $field_datas['special_params']['folder'], false );
+					$upload_dir	= $field->get_folder_path_from_user( $user, false );
 					$local_dir  = TFI_UPLOAD_FOLDER_DIR . '/' . $upload_dir;
 					$new_value 	= $upload_dir . '/' . $filename;
 					$new_path	= $local_dir . '/' . $filename;

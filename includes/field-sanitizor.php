@@ -145,12 +145,12 @@ class FieldSanitizor {
      * 
      * @param Field     $field      The field which has a file type
      * @param array     $file       The new field value, this is a post data file (with name, type, tmp_name, error and size parameters)
-     * @param int       $user_id    The id of the user, we need it to create the good filename for this user
+     * @param User      $user       The user, we need it to create the good filename for this file
      * 
      * @return string   The pathname for the sanitize file
      * @return false    If an error occured (call FieldSanitizor::last_error() to have more information about the error)
      */
-    public function sanitize_post_file_field( $field, $file, $user_id ) {
+    public function sanitize_post_file_field( $field, $file, $user ) {
         if ( $file['error'] !== UPLOAD_ERR_OK ) {
             switch ( $file['error'] ) {
                 case UPLOAD_ERR_INI_SIZE :
@@ -182,7 +182,7 @@ class FieldSanitizor {
             }
         }
         
-        $filepath   = tfi_get_user_file_folder_path( $user_id, $field->special_params['folder'], false );
+        $filepath   = $field->get_folder_path_from_user( $user, false );
         $filename   = $field->name . '.' . $extension;
 
         return $filepath . '/' . $filename;

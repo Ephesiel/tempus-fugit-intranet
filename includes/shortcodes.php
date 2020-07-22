@@ -99,6 +99,52 @@ class ShortcodesManager {
 
         $this->user = new User( get_current_user_id() );
 
+        /**
+         * This key appears when the user want to change its template
+         */
+        if ( array_key_exists( 'tfi_update_echo_template', $_GET ) ) {
+            $template_id = $_GET['tfi_update_echo_template'];
+            $this->user->set_current_echo_template( $template_id );
+
+            return;
+        }
+
+        /**
+         * This key appears when the user want to create a new template
+         */
+        if ( array_key_exists( 'tfi_new_echo_template', $_GET ) ) {
+            $new_template   = $_GET['tfi_new_echo_template'];
+            $campain        = $_GET['tfi_echo_campain'];
+
+            if ( $new_template != '' ) {
+                require_once TFI_PATH . 'includes/echo/echo-api.php';
+    
+                $template = Api::get()->add_template_for_user( $new_template, $campain );
+                if ( $template !== false ) {
+                    $this->user->set_current_echo_template( $template->id );
+                }
+            }
+
+            return;
+        }
+
+        /**
+         * This key appears when the user want to delete a template
+         */
+        if ( array_key_exists( 'tfi_delete_echo_template', $_GET ) ) {
+            $template_to_delete = $_GET['tfi_delete_echo_template'];
+
+            return;
+        }
+        
+        /**
+         * This key appears in post, when datas changed, we want to keep the same template to avoid confusion
+         * It is an hidden field inside the update form
+         */
+        if ( array_key_exists( 'tfi_echo_current_template', $_POST ) ) {
+            $this->user->set_current_echo_template( $_POST['tfi_echo_current_template'] );
+        }
+
         $posts = array_key_exists( 'tfi_update_user', $_POST ) ? $_POST['tfi_update_user'] : array();
         $files = array_key_exists( 'tfi_update_user', $_FILES ) ? tfi_re_array_files( $_FILES['tfi_update_user'] ) : array();
 
@@ -141,11 +187,13 @@ class ShortcodesManager {
      *      -   prefixs => string   => Prefixs separate by comma. all fields which begin by one of those prefix will be display on the form.
      *      -   suffixs => string   => Same ad 'prefixs' but with suffixs
      *      -   not-*   => string   => fields, prefixs or suffixs, will not take fields with those values
+     *      -   echo_fields => bool  => Add a select with all echo templates for the user
      * 
      * If none of the three last arguments are set, all fields will be displayed
      * 
      * @since 1.0.0
      * @since 1.2.0     Add arguments to display special fields
+     * @since 1.3.0     Add echo_field argument
      * @access public
      */
     public function display_user_form( $atts = array(), $content = null, $tag = '' ) {
@@ -183,6 +231,9 @@ class ShortcodesManager {
             $user_fields = array_diff_key( $user_fields, $fields_to_remove );
         }
 
+        if ( array_key_exists( 'echo_fields', $atts ) && $atts['echo_fields'] ) {
+            $output .= $this->add_echo_template_form();
+        }
         $output .= '<form class="tfi-user-form" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" enctype="multipart/form-data" method="POST">';
         $output .=      '<table class="form-table">';
         foreach ( $user_fields as $field ) {
@@ -195,7 +246,8 @@ class ShortcodesManager {
         }
         $output .=          '<tr><td><input type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '" /></td></tr>';
         $output .=      '</table>';
-        $output .=       '<input type="hidden" name="tfi_fields_version" value="' . esc_attr__( tfi_get_option( 'tfi_fields_version' ) ) . '" />';
+        $output .=      '<input type="hidden" name="tfi_fields_version" value="' . esc_attr__( tfi_get_option( 'tfi_fields_version' ) ) . '" />';
+        $output .=      '<input type="hidden" name="tfi_echo_current_template" value="' . $this->user->get_current_echo_template()->id . '" />';
         $output .= '</form>';
 
         return $output;
@@ -275,6 +327,55 @@ class ShortcodesManager {
         }
 
         return $output;
+    }
+
+    private function add_echo_template_form() {
+        $campains = $this->user->get_echo_campains();
+        $templates = $this->user->get_echo_templates();
+
+        $o = '<table class="form-table">';
+        $o.=    '<tr>';
+        $o.=        '<th>';
+        $o.=            '<label for="echo_template_select">';
+        $o.=                esc_html__( 'Echo template selection' );
+        $o.=            '</label>';
+        $o.=        '</th>';
+        $o.=        '<td>';
+        $o.=            '<form class="tfi-user-form form-inline" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" method="GET">';
+        $o.=                '<select onchange="this.form.submit()" id="echo_template_select" name="tfi_update_echo_template">';
+        foreach ( $templates as $template ) {
+        $o.=                    '<option value="' . $template->id . '" ' . ( $template->id === $this->user->get_current_echo_template()->id ? ' selected' : '' ) . '>' . $template->name . '</option>';
+        }
+        $o.=                '</select>';
+        $o.=                '<input onclick="document.getElementById(\'echo_template_select\').setAttribute(\'name\', \'tfi_delete_echo_template\'); this.form.submit()" type="button" class="submit-button" value="' . esc_attr__( 'Delete it' ) . '" />';
+        $o.=            '</form>';
+        $o.=        '</td>';
+        $o.=    '</tr>';
+        $o.=    '<tr>';
+        $o.=        '<th>';
+        $o.=            '<label for="new_echo_template">';
+        $o.=                esc_html__( 'New echo template' );
+        $o.=            '</label>';
+        $o.=        '</th>';
+        $o.=        '<td>';
+        $o.=            '<form class="tfi-user-form form-inline" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" method="GET">';
+        $o.=                '<input type="text" placeholder="' . esc_attr__( 'my_new_template' ) . '" id="new_echo_template" name="tfi_new_echo_template">';
+        $o.=                '<label for="echo_campain_select">';
+        $o.=                    esc_html__( 'Campain:' );
+        $o.=                '</label>';
+        $o.=                '<select onchange="this.form.submit()" id="echo_campain_select" name="tfi_echo_campain">';
+        foreach ( $campains as $campain ) {
+        $o.=                    '<option>' . $campain . '</option>';
+        }
+        $o.=                '</select>';
+        $o.=                '<input type="submit" class="submit-button" value="' . esc_attr__( 'Add template' ) . '" />';
+        $o.=            '</form>';
+        $o.=        '</td>';
+        $o.=    '</tr>';
+        $o.= '</table>';
+        $o.= '<hr />';
+
+        return $o;
     }
 
     /**

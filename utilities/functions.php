@@ -239,6 +239,7 @@ if ( ! function_exists( 'tfi_get_user_file_folder_path' ) ) {
             
             // We only need to verify the first, because options are sanitized
             if ( ! array_key_exists( $subdir, $all_folders ) ) {
+                wp_die( var_dump( $all_folders ) );
                 return false;
             }
     
