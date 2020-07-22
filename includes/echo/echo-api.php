@@ -62,8 +62,12 @@ class Api {
         return $value;
     }
 
-    public function try_login( $username, $password ) {
+    public function try_login( $username, $hash ) {
+        return true;
+    }
 
+    public function register( $username, $hash ) {
+        return true;
     }
 
     /**

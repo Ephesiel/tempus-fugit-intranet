@@ -38,7 +38,7 @@ class User {
     private $is_allowed;
 
     /**
-     * User_datas.
+     * Cache.
      * 
      * Contains everything about the user.
      * This is a cache to avoid multiple calls to database
@@ -120,6 +120,16 @@ class User {
      */
     public function is_ok() {
         return $this->is_register() && $this->has_intranet_access();
+    }
+
+    public function is_echo_user() {
+        foreach ( $this->allowed_fields() as $field ) {
+            if ( $field->is_echo_field() ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

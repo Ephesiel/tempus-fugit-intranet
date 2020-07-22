@@ -87,7 +87,7 @@ class ConnectionFormManager {
                 <?php if ( ! empty ( $this->errors ) ): ?>
                 <div id="tfi-form-errors-wrapper">
                     <?php foreach( $this->errors as $error ): ?>
-                    <p class="tfi-form-error"><?php esc_html_e( $error ); ?><p>
+                    <p class="tfi-form-error"><?php echo $error; ?><p>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
@@ -95,8 +95,8 @@ class ConnectionFormManager {
                 <form id="tfi-form" action="<?php esc_attr_e( $actual_url ); ?>" method="post">
                     <input type="hidden" name="tfi[last_url]" value="<?php esc_attr_e( $actual_url ); ?>" /> 
                     <div>
-                        <label for="tfi-user-id"><?php esc_html_e( 'Your id :' ); ?></label>
-                        <input class="tfi-input" id="tfi-user-id" type="text" name="tfi[user_id]" value="<?php echo isset( $_POST['tfi']['user_id'] ) ? esc_attr__( $_POST['tfi']['user_id'] ) : ''; ?>" />
+                        <label for="tfi-user-login"><?php esc_html_e( 'Your login :' ); ?></label>
+                        <input class="tfi-input" id="tfi-user-login" type="text" name="tfi[login]" value="<?php echo isset( $_POST['tfi']['login'] ) ? esc_attr__( $_POST['tfi']['login'] ) : ''; ?>" />
                     </div>
                     <div>
                         <label for="tfi-password"><?php esc_html_e( 'Password :' ); ?></label>
@@ -124,26 +124,116 @@ class ConnectionFormManager {
 	 * @access public
      */
     public function try_connection() {
-        if ( isset( $_POST['tfi']['user_id'] ) && isset( $_POST['tfi']['password'] ) ) {
-            $connection = wp_signon( array(
-                "user_login" => $_POST['tfi']['user_id'],
-                "user_password" => $_POST['tfi']['password']
+        if ( isset( $_POST['tfi']['login'] ) && isset( $_POST['tfi']['password'] ) ) {
+            $password   = $_POST['tfi']['password'];
+            $login      = $_POST['tfi']['login'];
+
+            /**
+             * Try a wordpress connection, if this value is true, the user will be connected
+             */
+            $wp_user = wp_signon( array(
+                "user_login" => $login,
+                "user_password" => $password
             ) );
-            $url = get_permalink( tfi_get_option( 'tfi_user_page_id' ) );
+
+            $is_wp_user = ! is_wp_error( $wp_user );
+
+            require_once TFI_PATH . 'includes/echo/echo-api.php';
+
+            /**
+             * If it returns true, it means that the user is registered in the echo base, so, we need to add it to the wordpress users.
+             */
+            $is_echo_user = Api::get()->try_login( $login, $password );
             
-            if ( ! empty( $connection->errors ) ) {
+            /**
+             * First case : the user doesn't exists and is not an echo user -> display wp errors
+             */
+            if ( ! $is_wp_user && ! $is_echo_user ) {
                 $this->errors = array(
-                    __( 'Login or password incorrect' )
+                    $wp_user->get_error_message()
                 );
             }
-            else if ( wp_redirect( $url ) ) {
-                exit;
+            /**
+             * Second case : the user is a wordpress user, but not an echo one. 
+             * Verification if the user need to be store in the echo database
+             */
+            else if ( $is_wp_user && ! $is_echo_user ) {
+                require_once TFI_PATH . 'includes/user.php';
+
+                $user = new User( $wp_user->ID );
+                if ( $user->is_echo_user() ) {
+                    $result = Api::get()->register( $login, $password );
+
+                    if ( $result === false ) {
+                        $this->errors = array(
+                            '<strong>' . esc_html__( 'Echo API error:' ) . '</strong>' . esc_html__( Api::get()->last_error )
+                        );
+                    }
+                }
             }
-            else {
+            /**
+             * Third case : the user is an echo user, but not a wordpress one
+             * We store the user in the wordpress database
+             */
+            else if ( ! $is_wp_user && $is_echo_user ) {
+                if ( empty( $password ) ) {
+                    $this->errors = array(
+                        '<strong>' . esc_html__( 'New intranet user error: ' ) . '</strong>' .
+                        esc_html__( 'Impossible to create a new user with an empty password.' ) . '<br />' .
+                        esc_html__( 'Note that this is strange that you\'re an echo user without password, ask your administrator about that please' )
+                    );
+                }
+                else {
+                    $datas = array(
+                        'user_pass' => $password,
+                        'user_login' => $login,
+                        'role' => 'tfi_user'
+                    );
+    
+                    //wp_die( var_dump( $datas ) );
+                    $wp_user_id = wp_insert_user( $datas );
+    
+                    if ( is_wp_error( $wp_user_id ) ) {
+                        $this->errors = array(
+                            '<strong>' . esc_html__( 'New intranet user error: ' ) . '</strong>' . $wp_user_id->get_error_message()
+                        );
+                    }
+                    else {
+                        $new_wp_user = wp_signon( array(
+                            "user_login" => $login,
+                            "user_password" => $password
+                        ) );
+    
+                        if ( is_wp_error( $new_wp_user ) ) {
+                            $this->errors = array(
+                                '<strong>' . esc_html__( 'New intranet user error: ' ) . '</strong>' .
+                                esc_html__( 'Success to create user but the login failed with the following error: ' ) . $new_wp_user->get_error_message()
+                            );
+                        }
+                    }
+                }
+            }
+            /**
+             * Last case : the user is an echo user and a wordpress one, he can connect
+             */
+            
+            if ( empty( $this->errors ) ) {
+                /**
+                 * If there is no errors, redirect the permalink to the intranet user page
+                 */
+                if ( wp_redirect( get_permalink( tfi_get_option( 'tfi_user_page_id' ) ) ) ) {
+                    exit;
+                }
+
                 $this->errors = array(
-                    __( 'The redirection url isn\'t valid, please try later' )
+                    esc_html__( 'The redirection url isn\'t valid, please try later' )
                 );
             }
+
+            /**
+             * Not possible because it will recall the page without post (and so no errors) 
+             */
+            wp_logout_url( get_permalink( get_the_ID() ) );
         }
         else {
             $this->errors = array();
