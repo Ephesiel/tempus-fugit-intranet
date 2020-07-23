@@ -70,7 +70,7 @@ class PluginsManager {
          * A sub plugin needs to be inside a directory
          */
         $plugins_directory_files = glob( TFI_PLUGINS_FOLDER_PATH . '*', GLOB_ONLYDIR );
-        $option_plugins = tfi_get_option( 'tfi_plugins' );
+        $option_plugins = array();
 
         /**
          * Look at all directory inside the plugins directory

@@ -863,7 +863,7 @@ class AdminPanelManager {
 				<td><input type="checkbox" id="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>" name="tfi_plugins[<?php echo esc_attr( $plugin_name ); ?>]" <?php echo $enable ? 'checked ' : ''; ?>/></td>
 				<th><label for="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>"><?php echo ucfirst( esc_html( implode( ' ', explode( '_', $plugin_name ) ) ) ); ?></label></th>
 				<?php if ( is_string( $description ) && ! empty( $description ) ): ?>
-				<td><i><?php echo $description; ?></i></td>
+				<td><?php echo $description; ?></td>
 				<?php endif; ?>
 			</tr>
 			<?php endforeach; ?>
