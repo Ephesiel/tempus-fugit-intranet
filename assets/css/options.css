@@ -4,7 +4,7 @@
     white-space: nowrap;
 }
 
-.tfi-options-table td input[type=checkbox] {
+#tfi-fields-table td input[type=checkbox] {
     margin-top: 8px;
 }
 

@@ -84,6 +84,12 @@ if ( ! function_exists( 'tfi_get_option' ) ) {
                     'key' => 0
                 );
             break;
+            case 'tfi_plugins':
+                $default = array(
+                    'echo' => false,
+                    'parallax' => false
+                );
+            break;
         }
 
         return get_option( $option_name, $default );

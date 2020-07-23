@@ -73,6 +73,7 @@ class AdminPanelManager {
 				<?php settings_fields( 'tfi_general_options' ); ?>
 				<?php do_settings_sections( 'connection-form' ); ?>
 				<?php do_settings_sections( 'general-user' ); ?>
+				<?php do_settings_sections( 'plugins' ); ?>
 				<?php submit_button(); ?>
 			</form>
 			<form method="post" action="options.php">
@@ -117,6 +118,12 @@ class AdminPanelManager {
 			'tfi_general_options',
 			'tfi_user_types',
 			array( $this, 'sanitize_user_types' )
+		);
+		
+		register_setting(
+			'tfi_general_options',
+			'tfi_plugins',
+			array( $this, 'sanitize_plugins' )
 		);
 		
 		register_setting(
@@ -215,6 +222,14 @@ class AdminPanelManager {
 			'user_types_id',
 			__( 'User types' ),
 			array( $this, 'user_types_callback' ),
+			'general-user',
+			'general_user_options_id'
+		);
+
+		add_settings_field(
+			'plugins_id',
+			__( 'Plugins' ),
+			array( $this, 'plugins_callback' ),
 			'general-user',
 			'general_user_options_id'
 		);
@@ -319,6 +334,43 @@ class AdminPanelManager {
 		return $options_manager->verify_option( 'tfi_user_types', $option );
 	}
 
+	/**
+	 * Sanitize_plugins.
+	 * 
+	 * Sanitize plugins
+	 * 
+	 * @since 1.3.0
+	 * @access public
+	 * @param array		$input	Contains all activated plugins
+	 * @return array	all plugins sanitized
+	 */
+	public function sanitize_plugins( $input ) {
+		/**
+		 * We need to know all plugins because the checkbox return something only if checked
+		 * Unchecked plugins doesn't exists
+		 */
+		$plugins = tfi_get_option( 'tfi_plugins' );
+
+		foreach ( $plugins as $plugin_name => $plugin_enable ) {
+			$plugins[$plugin_name] = isset( $input[$plugin_name] );
+		}
+        
+		require_once TFI_PATH . 'includes/options.php';
+
+		$options_manager = new OptionsManager;
+		return $options_manager->verify_option( 'tfi_plugins', $plugins );
+	}
+
+	/**
+	 * Sanitize_file_folders.
+	 * 
+	 * Sanitize file folders
+	 * 
+	 * @since 1.2.0
+	 * @access public
+	 * @param array		$input	Contains all file folders
+	 * @return 			$input sanitized
+	 */
 	public function sanitize_file_folders( $input ) {
 		/**
 		 * This key is destroyed because it's only used in js
@@ -752,6 +804,24 @@ class AdminPanelManager {
 		</ul>
 		<p><i><?php esc_html_e( 'Add new types here (separate by % if you want multiple types).' ); ?></i></p>
 		<input name="tfi_user_types[new_types]" type="text" placeholder="<?php esc_attr_e( 'First type%Second type' ); ?>" />
+		<?php
+	}
+
+	public function plugins_callback() {
+		?>
+		<table class="tfi-options-table">
+			<?php foreach ( tfi_get_option( 'tfi_plugins' ) as $plugin_name => $enable ):
+			$description = apply_filters( 'tfi_plugin_description_' . $plugin_name, '' );	
+			?>
+			<tr>
+				<td><input type="checkbox" id="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>" name="tfi_plugins[<?php echo esc_attr( $plugin_name ); ?>]" <?php echo $enable ? 'checked ' : ''; ?>/></td>
+				<th><label for="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>"><?php echo ucfirst( esc_html( implode( ' ', explode( '_', $plugin_name ) ) ) ); ?></label></th>
+				<?php if ( is_string( $description ) && ! empty( $description ) ): ?>
+				<td><i><?php echo $description; ?></i></td>
+				<?php endif; ?>
+			</tr>
+			<?php endforeach; ?>
+		</table>
 		<?php
 	}
 

@@ -22,6 +22,7 @@ class OptionsManager {
      * @since 1.2.1     Add 'number' and 'color' field types
      * @since 1.2.2     Add 'multiple' field types
      * @since 1.2.3     Add tfi_fields_version option
+     * @since 1.3.0     Add tfi_plugins option
      * 
      * @static
      * @access private
@@ -29,6 +30,10 @@ class OptionsManager {
      * @var array
      */
     private static $default_options = array(
+        'tfi_plugins' => array(
+            'echo' => false,
+            'parallax' => false
+        ),
         'tfi_shortcut' => array(
             'ctrl_key_used' => true,
             'alt_key_used' => true,
@@ -216,6 +221,38 @@ class OptionsManager {
      */
     public static function get_parent_file_folder_slug() {
         return array_key_first( self::$default_options['tfi_file_folders'] );
+    }
+
+    /**
+     * Verify_plugins.
+     * 
+     * @since 1.3.0
+     * @access private
+     * 
+     * @param array $plugins    the value to verify for the option tfi_plugins
+     * @return array            $plugins sanitized
+     */
+    private function verify_plugins( $plugins ) {
+        if ( ! is_array( $plugins ) ) {
+            return self::$default_options['tfi_plugins'];
+        }
+
+        /**
+         * All plugins are in the default array and should be on the new array too.
+         */
+        $new_plugins = self::$default_options['tfi_plugins'];
+
+        foreach( $plugins as $plugin_name => $plugin_value ) {
+            if ( ! is_bool( $plugin_value ) ) {
+                continue;
+            }
+
+            if ( array_key_exists( $plugin_name, $new_plugins ) ) {
+                $new_plugins[$plugin_name] = $plugin_value;
+            }
+        }
+
+        return $new_plugins;
     }
 
     /**
