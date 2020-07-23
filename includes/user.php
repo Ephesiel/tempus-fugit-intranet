@@ -51,19 +51,6 @@ class User {
      */
     private $cache;
 
-    /**
-     * Current_echo_template.
-     * 
-     * The template used for echo datas
-     * 
-     * @since 1.3.0
-     * @access private
-     * 
-     * @var Template
-     * @var null
-     */
-    private $current_echo_template;
-
 	/**
 	 * User constructor.
 	 *
@@ -80,7 +67,6 @@ class User {
             $this->is_allowed = $this->is_allowed->has_cap( 'access_intranet' );
         }
         $this->cache   = array_key_exists( $user_id, $users ) ? $users[$user_id] : false;
-        $this->current_echo_template = null;
     }
 
     /**
@@ -120,105 +106,6 @@ class User {
      */
     public function is_ok() {
         return $this->is_register() && $this->has_intranet_access();
-    }
-
-    public function is_echo_user() {
-        foreach ( $this->allowed_fields() as $field ) {
-            if ( $field->is_echo_field() ) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Set_current_echo_template.
-     * 
-     * Setter for the template to use for datas.
-     * 
-     * @since 1.3.0
-     * @access public
-     * @param int   $template_id   The id of the template where echo's datas will be store or get
-     */
-    public function set_current_echo_template( $template_id ) {
-        foreach ( $this->get_echo_templates() as $template ) {
-            if ( $template->id == $template_id ) {
-                $this->current_echo_template = $template;
-                break;
-            }
-        }
-    }
-
-    /**
-     * Get_current_echo_template.
-     * 
-     * Getter for the template to use for datas.
-     * 
-     * @since 1.3.0
-     * @access public
-     * @return Template
-     */
-    public function get_current_echo_template() {
-        return $this->current_echo_template === null ? $this->get_echo_templates()[0] : $this->current_echo_template;
-    }
-
-    /**
-     * Get_echo_templates.
-     * 
-     * Getter for all existing templates
-     * 
-     * @since 1.3.0
-     * @access public
-     * @return array
-     */
-    public function get_echo_templates() {
-        if ( ! $this->is_ok() ) {
-            return false;
-        }
-
-        if ( ! array_key_exists( 'echo_templates', $this->cache ) ) {
-            require_once TFI_PATH . 'includes/echo/echo-api.php';
-
-            $templates = Api::get()->get_templates_for_user();
-
-            if ( $templates !== false ) {
-                $this->cache['echo_templates'] = $templates;
-            } else {
-                wp_die( 'impossible to get templates - error : ' . Api::get()->last_error );
-            }
-        }
-
-        return $this->cache['echo_templates'];
-    }
-
-    /**
-     * Get_echo_campains.
-     * 
-     * Getter for all existing campains
-     * 
-     * @since 1.3.0
-     * @access public
-     * @return array
-     */
-    public function get_echo_campains() {
-        if ( ! $this->is_ok() ) {
-            return false;
-        }
-
-        if ( ! array_key_exists( 'echo_campains', $this->cache ) ) {
-            require_once TFI_PATH . 'includes/echo/echo-api.php';
-
-            $campains = Api::get()->get_campains_for_user();
-
-            if ( $campains !== false ) {
-                $this->cache['echo_campains'] = $campains;
-            } else {
-                wp_die( 'impossible to get campains - error : ' . Api::get()->last_error );
-            }
-        }
-
-        return $this->cache['echo_campains'];
     }
 
     /**
@@ -429,26 +316,26 @@ class User {
             }
             else if ( isset( $files[$field->name] ) ) {
                 $sanitation_result = $this->sanitize_file_data( $files[$field->name], $field );
+        
                 $result[$field->name] = $sanitation_result['result'];
                 if ( isset( $sanitation_result['change'] ) ) {
                     $changes[$field->name] = $sanitation_result['change'];
                 }
             }
 
-            /**
-             * When this is an echo field, we need to create an array with the actual template as key
-             * It allows to keep every template separated 
-             */
-            if ( isset( $changes[$field->name] ) && $field->is_echo_field() ) {
-                $temp = $changes[$field->name];
-                $changes[$field->name] = $this->user_db_datas()[$field->name];
+            if ( isset( $changes[$field->name] ) ) {
                 /**
-                 * This is used when old echo's values are set in database but are not array
+                 * When a user data has changed, allow to customize the new value
+                 * 
+                 * @param mixed     The new value for the field to insert
+                 * @param User      User whom data has been modified
+                 * @param Field     The field (with old value for example) 
+                 * 
+                 * @return mixed    The value modified to push in database
+                 * 
+                 * @since 1.3.0
                  */
-                if ( ! is_array( $changes[$field->name] ) ) {
-                    unset( $changes[$field->name] );
-                }
-                $changes[$field->name][$this->get_current_echo_template()->pretty_id()] = $temp;
+                $changes[$field->name] = apply_filters( 'tfi_user_data_changed', $changes[$field->name], $this, $field );
             }
         }
 
@@ -550,7 +437,8 @@ class User {
         
         $file_manager           = new FileManager;
         $to_return['change']    = $sanitation;
-        $old_value              = $field->get_value_for_user( $this, 'upload_path' ); 
+        $old_value              = $field->get_value_for_user( $this, 'upload_path' );
+
 
         if ( $old_value !== '' && ! $file_manager->remove_file( $old_value ) ) {
             $to_return['result']['tfi-error'] = __( 'The old image failed to removed' );
@@ -677,8 +565,8 @@ class User {
         /**
          * When user datas has been changed, a filter is applying to allow post process
          * 
-         * @param User  $this               User whom datas has been modified
-         * @param array $changed_fields     All Field objects which changed, keys are field_slug
+         * @param User      User whom datas has been modified
+         * @param array     All Field objects which changed, keys are field_slug
          * 
          * @since 1.2.0
          * @since 1.2.2     Return the user instead of the id, don't return values. 
