@@ -114,7 +114,13 @@ if ( ! function_exists( 'tfi_delete_files' ) ) {
                 tfi_delete_files( $file );      
             }
 
-            rmdir( $target );
+            /**
+             * Verification of the file, because if the '/' isn't set at the end of the first target,
+             * the folder is also inside $files and will be deleted twice, generating a warning
+             */
+            if ( file_exists( $target ) ) {
+                rmdir( $target );
+            }
         }
         else if ( is_file( $target ) ) {
             unlink( $target );  

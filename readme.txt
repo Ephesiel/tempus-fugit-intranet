@@ -24,7 +24,7 @@ Intranet to allow every students to add their own datas at home whitout passing 
 * Image are not resize if the size is good. A resize png
 
 = 1.1.3 =
-* Add parallax usage for the tempus-fugi site (css and js)
+* Add parallax usage for the tempus-fugit site (css and js)
 
 = 1.1.4 =
 * Correction of the ugly png resize.

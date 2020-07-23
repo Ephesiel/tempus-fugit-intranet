@@ -31,9 +31,30 @@ class UninstallManager {
      * @access public 
      */
     public function __construct() {
+        $this->uninstall_plugins();
         $this->delete_options();
         $this->drop_table();
         $this->delete_upload_dir();
+    }
+
+    /**
+     * Uninstall_plugins.
+     * 
+     * Uninstall each sub plugins
+     * 
+     * @since 1.3.0
+     * @access private
+     */
+    private function uninstall_plugins() {
+        require_once TFI_PATH . 'includes/plugins-manager.php';
+        
+        foreach ( tfi_get_option( 'tfi_plugins' ) as $plugin_name => $enable ) {
+            $plugin = PluginsManager::get_plugin( $plugin_name );
+            
+            if ( $plugin !== false ) {
+                $plugin->uninstall();
+            }
+        }
     }
 
     /**
@@ -78,9 +99,7 @@ class UninstallManager {
      */
     private function delete_upload_dir() {
         if ( defined( 'TFI_UPLOAD_FOLDER_DIR' ) ) {
-            if ( file_exists( TFI_UPLOAD_FOLDER_DIR ) ) {
-                tfi_delete_files( TFI_UPLOAD_FOLDER_DIR );
-            }
+            tfi_delete_files( TFI_UPLOAD_FOLDER_DIR );
         }
     }
 }

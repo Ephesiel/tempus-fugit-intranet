@@ -36,6 +36,11 @@ else {
 	require TFI_PATH . 'plugins/page-template.php';
 	
 	/**
+	 * The plugin manager wlass which manage all sub plugins
+	 */
+	require TFI_PATH . 'includes/plugins-manager.php';
+	
+	/**
 	 * The main file of the tfi plugin
 	 */
 	require TFI_PATH . 'includes/plugin.php';

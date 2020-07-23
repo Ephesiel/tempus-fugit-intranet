@@ -32,6 +32,7 @@ class InstallManager {
      * 
      * Call every methods needed at activation.
      * It adds options, create table and add every roles and capabilities.
+     * Sub plugins are activated at the end, they will be able to use tfi datas and functions.
      * 
      * @since 1.0.0
      * @access public
@@ -41,6 +42,7 @@ class InstallManager {
         self::add_roles();
         self::add_options();
         self::create_table();
+        self::activate_plugins();
     }
 
     /**
@@ -53,11 +55,14 @@ class InstallManager {
      * If the plugin is reactivate all datas will still be here.
      * (Note that the role won't need to be add to users again because wordpress keep it in user datas).
      * 
+     * Sub plugins are deactivated first, they will be able to use tfi datas and functions.
+     * 
      * @since 1.0.0
      * @access public
      * @static
      */
     public static function plugin_deactivation() {
+        self::deactivate_plugins();
         self::remove_roles();
     }
 
@@ -143,6 +148,48 @@ class InstallManager {
 
         remove_role( 'tfi_user' );
         $wp_roles->remove_cap( 'administrator', 'access_intranet' );
+    }
+
+    /**
+     * Activate_plugins
+     * 
+     * Activate all sub plugins which need to be activate.
+     * 
+     * @since 1.3.0
+     * @access private
+     * @static
+     */
+    private static function activate_plugins() {
+        foreach ( tfi_get_option( 'tfi_plugins' ) as $plugin_name => $enable ) {
+            if ( $enable ) {
+				$plugin = PluginsManager::get_plugin( $plugin_name );
+				
+				if ( $plugin !== false ) {
+					$plugin->activate( true );
+				}
+            }
+        }
+    }
+
+    /**
+     * Deactivate_plugins
+     * 
+     * Deactivate all sub plugins which need to be deactivate.
+     * 
+     * @since 1.3.0
+     * @access private
+     * @static
+     */
+    private static function deactivate_plugins() {
+        foreach ( tfi_get_option( 'tfi_plugins' ) as $plugin_name => $enable ) {
+            if ( $enable ) {
+				$plugin = PluginsManager::get_plugin( $plugin_name );
+				
+				if ( $plugin !== false ) {
+					$plugin->deactivate( true );
+				}
+            }
+        }
     }
 }
 

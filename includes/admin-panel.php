@@ -157,7 +157,7 @@ class AdminPanelManager {
 		add_action( 'update_option_tfi_fields', array( $this, 'update_users_datas' ), 10, 0 );
 
 		/**
-		 * When tfi_fields change, the file folder can hav been changed
+		 * When tfi_fields change, the file folder can have been changed
 		 * If this is the case, we move existing files to the new folder.
 		 * 
 		 * @since 1.2.0
@@ -174,6 +174,13 @@ class AdminPanelManager {
 		 * @since 1.2.3
 		 */
 		add_action( 'update_option_tfi_fields', array( $this, 'update_users_datas_type' ), 10, 2 );
+
+		/**
+		 * When plugins changed, we need to call for activation and deactivation for them
+		 * 
+		 * @since 1.3.0
+		 */
+		add_action( 'update_option_tfi_plugins', array( $this, 'update_plugins' ), 10, 2 );
 
 		/**
 		 * All sections and subsections to display on the option page
@@ -729,6 +736,45 @@ class AdminPanelManager {
 
 			if ( ! empty( $changes ) ) {
 				$user->set_values_for_fields( $changes );
+			}
+		}
+	}
+
+	/**
+	 * Update_plugins.
+	 * 
+	 * When this option is updated, all deactivate plugins will be deactivated and all new activate plugins will be activated
+	 * 
+	 * @since 1.3.0
+	 * @access public
+	 * 
+	 * @param array	$old_plugins	The array of all old plugins
+	 * @param array	$new_plugins	The array of all new plugins
+	 */
+	public function update_plugins( $old_plugins, $new_plugins ) {
+		foreach ( $old_plugins as $plugin_name => $enable ) {
+			/**
+			 * If the plugin was enable and didn't exists anymore or has been deactivate, deactivate it
+			 */
+			if ( $enable && ( ! array_key_exists( $plugin_name, $new_plugins ) || ! $new_plugins[$plugin_name] ) ) {
+				$plugin = PluginsManager::get_plugin( $plugin_name );
+				
+				if ( $plugin !== false ) {
+					$plugin->deactivate();
+				}
+			}
+		}
+
+		foreach ( $new_plugins as $plugin_name => $enable ) {
+			/**
+			 * If the plugin is enable and didn't exists before or has been activate, activate it
+			 */
+			if ( $enable && ( ! array_key_exists( $plugin_name, $old_plugins ) || ! $old_plugins[$plugin_name] ) ) {
+				$plugin = PluginsManager::get_plugin( $plugin_name );
+				
+				if ( $plugin !== false ) {
+					$plugin->activate();
+				}
 			}
 		}
 	}

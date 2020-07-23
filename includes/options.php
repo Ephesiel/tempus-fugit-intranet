@@ -30,10 +30,7 @@ class OptionsManager {
      * @var array
      */
     private static $default_options = array(
-        'tfi_plugins' => array(
-            'echo' => false,
-            'parallax' => false
-        ),
+        'tfi_plugins' => array(),
         'tfi_shortcut' => array(
             'ctrl_key_used' => true,
             'alt_key_used' => true,
@@ -234,13 +231,13 @@ class OptionsManager {
      */
     private function verify_plugins( $plugins ) {
         if ( ! is_array( $plugins ) ) {
-            return self::$default_options['tfi_plugins'];
+            return tfi_get_option( 'tfi_plugins' );
         }
 
         /**
-         * All plugins are in the default array and should be on the new array too.
+         * All plugins are in the actual array and should be on the new array too.
          */
-        $new_plugins = self::$default_options['tfi_plugins'];
+        $new_plugins = tfi_get_option( 'tfi_plugins' );
 
         foreach( $plugins as $plugin_name => $plugin_value ) {
             if ( ! is_bool( $plugin_value ) ) {
