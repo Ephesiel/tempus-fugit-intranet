@@ -69,8 +69,9 @@ class PluginsManager {
         /**
          * A sub plugin needs to be inside a directory
          */
-        $plugins_directory_files = glob( TFI_PLUGINS_FOLDER_PATH . '*', GLOB_ONLYDIR );
-        $option_plugins = array();
+        $plugins_directory_files    = glob( TFI_PLUGINS_FOLDER_PATH . '*', GLOB_ONLYDIR );
+        $option_plugins             = array();
+		$old_option_plugins         = tfi_get_option( 'tfi_plugins' );
 
         /**
          * Look at all directory inside the plugins directory
@@ -97,9 +98,7 @@ class PluginsManager {
             /**
              * Modify the option or set the basic value on false
              */
-            if ( ! isset( $option_plugins[$plugin_name] ) ) {
-                $option_plugins[$plugin_name] = false;
-            }
+            $option_plugins[$plugin_name] = isset( $old_option_plugins[$plugin_name] ) ? $old_option_plugins[$plugin_name] : false;
 
             /**
              * The key is the plugin_name to access it easily
@@ -110,7 +109,7 @@ class PluginsManager {
         /**
          * If there is new plugins, we update the option.
          */
-        if ( $option_plugins !== tfi_get_option( 'tfi_plugins' ) ) {
+        if ( $option_plugins !== $old_option_plugins ) {
             update_option( 'tfi_plugins', $option_plugins );
         }
     }
