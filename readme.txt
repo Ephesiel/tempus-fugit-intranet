@@ -4,7 +4,7 @@ Tags: intranet
 Requires at least: 5.1
 Tested up to: 5.2
 Requires PHP: 7.3
-Stable tag: 1.0
+Stable tag: 1.2.4
  
 Intranet to allow every students to add their own datas at home whitout passing by the wordpress admin page.
 
@@ -78,9 +78,10 @@ Inside the Settings > Tempus Fugit Intranet page, you have multiple options that
 * New fields, you can choose :
 	* The slug -> It NEEDS to be UNIQUE. Be careful once you have a lot of datas saved on a field, do not change this value, because the field will be reset for all users (but if you change it again, values will be back)
 	* The name -> Name to display on the form for this field
-	* The type -> You can choose between 3 types
+	* The type -> You can choose between some field types (text, link, image, multiple...)
 	* The default value -> The first value which is set in database while users don't change it
 	* Then choose which user type will be able to have this field
+	* For some type field, you can have special parameters which will be displayed. Do not hesitate to hover them to have an explanation.
 * New users :
 	* The user name (don't choose a user which is already in the list because it won't change). You can only choose a user with the 'access_intranet' capability (see 'Intranet Users' section above)
 	* The user type to know which field he will have.
@@ -98,11 +99,13 @@ This shortcode can have some attributes :
 If user_id is set, the user_slug is useless
 If neither user_id or user_slug are set, the user will be the current one (it means the user which is on the site or nothing happend if he is not register)
 
-= Filters =
-You can use one filter calls 'tfi_user_datas_change' which accept 3 arguments.
+= Actions =
+You can use one action calls 'tfi_user_datas_changed' which accept 3 arguments.
 * The first is the id of the user which changed his data.
 * The second is an array of all fields which changed, with all their options.
 * The third is an array of all values for each fields.
 
 = Other points =
 * The upload max size of a file is, by default, 2 Mb on most wordpress site. So to allow higher image size, you need to change your server configuration about upload file max size.
+* The max file upload is 20 by default on a server. When using more than 20 files, you need to change it or only the 20 first files will be updated (when you use echo plugin for example).
+* The max input vars is 1000 by default (variable which can be send in post method). You need to increase this number if you have a lot of users and fields to update in the admin panel.

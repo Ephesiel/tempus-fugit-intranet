@@ -571,7 +571,7 @@ class User {
          * @since 1.2.0
          * @since 1.2.2     Return the user instead of the id, don't return values. 
          */
-        apply_filters( 'tfi_user_datas_changed', $this, $changed_fields );
+        do_action( 'tfi_user_datas_changed', $this, $changed_fields );
 
         return true;
     }
