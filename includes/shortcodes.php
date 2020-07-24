@@ -277,55 +277,6 @@ class ShortcodesManager {
         return $output;
     }
 
-    private function add_echo_template_form() {
-        $campains = $this->user->get_echo_campains();
-        $templates = $this->user->get_echo_templates();
-
-        $o = '<table class="form-table">';
-        $o.=    '<tr>';
-        $o.=        '<th>';
-        $o.=            '<label for="echo_template_select">';
-        $o.=                esc_html__( 'Echo template selection' );
-        $o.=            '</label>';
-        $o.=        '</th>';
-        $o.=        '<td>';
-        $o.=            '<form class="tfi-user-form form-inline" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" method="GET">';
-        $o.=                '<select onchange="this.form.submit()" id="echo_template_select" name="tfi_update_echo_template">';
-        foreach ( $templates as $template ) {
-        $o.=                    '<option value="' . $template->id . '" ' . ( $template->id === $this->user->get_current_echo_template()->id ? ' selected' : '' ) . '>' . $template->name . '</option>';
-        }
-        $o.=                '</select>';
-        $o.=                '<input onclick="document.getElementById(\'echo_template_select\').setAttribute(\'name\', \'tfi_delete_echo_template\'); this.form.submit()" type="button" class="submit-button" value="' . esc_attr__( 'Delete it' ) . '" />';
-        $o.=            '</form>';
-        $o.=        '</td>';
-        $o.=    '</tr>';
-        $o.=    '<tr>';
-        $o.=        '<th>';
-        $o.=            '<label for="new_echo_template">';
-        $o.=                esc_html__( 'New echo template' );
-        $o.=            '</label>';
-        $o.=        '</th>';
-        $o.=        '<td>';
-        $o.=            '<form class="tfi-user-form form-inline" action="' . esc_attr( get_permalink( get_the_ID() ) ) . '" method="GET">';
-        $o.=                '<input type="text" placeholder="' . esc_attr__( 'my_new_template' ) . '" id="new_echo_template" name="tfi_new_echo_template">';
-        $o.=                '<label for="echo_campain_select">';
-        $o.=                    esc_html__( 'Campain:' );
-        $o.=                '</label>';
-        $o.=                '<select onchange="this.form.submit()" id="echo_campain_select" name="tfi_echo_campain">';
-        foreach ( $campains as $campain ) {
-        $o.=                    '<option>' . $campain . '</option>';
-        }
-        $o.=                '</select>';
-        $o.=                '<input type="submit" class="submit-button" value="' . esc_attr__( 'Add template' ) . '" />';
-        $o.=            '</form>';
-        $o.=        '</td>';
-        $o.=    '</tr>';
-        $o.= '</table>';
-        $o.= '<hr />';
-
-        return $o;
-    }
-
     /**
      * Add_field
      * 

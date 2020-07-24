@@ -92,13 +92,8 @@ footer {
     text-decoration: none;
 }
 
-#tfi-user-page-content .form-inline {
-    display: flex;
-    align-items: center;
-}
-
-#tfi-user-page-content .form-inline * {
-    margin-right: 10px;
+#tfi-user-page-content .form-echo .submit-button {
+    margin-left: 10px;
 }
 
 #tfi-user-page-content .form-table {

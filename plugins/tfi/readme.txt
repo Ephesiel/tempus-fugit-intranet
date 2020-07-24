@@ -29,6 +29,7 @@ There is multiple hooks handle by the tfi plugin which can be used by sub plugin
 But there is hooks create specialy for those sub plugins :
     - tfi_plugins_activate_{plugin_name}    -> (action) This hook allows to do something when your plugin is activate
     - tfi_plugins_deactivate_{plugin_name}  -> (action) This hook allows to do something when your plugin is deactivate
+    - tfi_plugins_loaded                    -> (action) Equivalent of 'plugins_loaded' wordpress hook for tfi plugins
 
 Each time, you should replace {plugin_name} by the name of your plugin (alias: your plugin folder name)
 

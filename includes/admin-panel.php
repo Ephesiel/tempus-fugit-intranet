@@ -1072,18 +1072,18 @@ class AdminPanelManager {
 		}
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
-			<label title="<?php esc_attr_e( 'The mandatory height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
-			<input  type="number"
-					min="0"
-					name="<?php echo esc_attr( $name ); ?>[height]"
-					value="<?php echo esc_attr( $special_params['height'] ); ?>" />
-		</div>
-		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
 			<label title="<?php esc_attr_e( 'The mandatory width of the image (px)' ); ?>"><?php esc_html_e( 'W:' ); ?></label>
 			<input  type="number"
 					min="0"
 					name="<?php echo esc_attr( $name ); ?>[width]"
 					value="<?php echo esc_attr( $special_params['width'] ); ?>" />
+		</div>
+		<div class="<?php echo esc_attr( $class ); ?>" field-type="image">
+			<label title="<?php esc_attr_e( 'The mandatory height of the image (px)' ); ?>"><?php esc_html_e( 'H:' ); ?></label>
+			<input  type="number"
+					min="0"
+					name="<?php echo esc_attr( $name ); ?>[height]"
+					value="<?php echo esc_attr( $special_params['height'] ); ?>" />
 		</div>
 		<div class="<?php echo esc_attr( $class ); ?>" field-type="link">
 			<label title="<?php esc_attr_e( 'The required domain names separated by comma' ); ?>"><?php esc_html_e( 'D:' ); ?></label>
