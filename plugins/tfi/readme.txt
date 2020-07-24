@@ -12,12 +12,23 @@ Example :
 
 This file, called "main file" is the file which will be called when the plugin will be activated.
 
+In this main file, you can add a first to describe your plugin (like a wordpress plugin) for example :
+/**
+ * Plugin Name: My awesome plugin
+ * Other Option: Option value
+ * ...
+ */
+
+Available options are :
+- Description -> A short description of your plugin uses
+- Plugin Name -> The display name of the plugin
+- Version     -> The current version of the plugin 
+
 2- Hooks
 There is multiple hooks handle by the tfi plugin which can be used by sub plugins to modify datas etc...
 But there is hooks create specialy for those sub plugins :
     - tfi_plugins_activate_{plugin_name}    -> (action) This hook allows to do something when your plugin is activate
     - tfi_plugins_deactivate_{plugin_name}  -> (action) This hook allows to do something when your plugin is deactivate
-    - tfi_plugins_description_{plugin_name} -> (filter) This hook allows to display an html div to briefly describe your plugin on the admin option panel
 
 Each time, you should replace {plugin_name} by the name of your plugin (alias: your plugin folder name)
 

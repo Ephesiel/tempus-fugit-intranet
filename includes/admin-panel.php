@@ -857,14 +857,17 @@ class AdminPanelManager {
 		?>
 		<table class="tfi-options-table">
 			<?php foreach ( tfi_get_option( 'tfi_plugins' ) as $plugin_name => $enable ):
-			$description = apply_filters( 'tfi_plugin_description_' . $plugin_name, '' );	
+			$plugin = PluginsManager::get_plugin( $plugin_name );
+
+			if ( $plugin === false ) {
+				continue;
+			}
 			?>
 			<tr>
 				<td><input type="checkbox" id="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>" name="tfi_plugins[<?php echo esc_attr( $plugin_name ); ?>]" <?php echo $enable ? 'checked ' : ''; ?>/></td>
-				<th><label for="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>"><?php echo ucfirst( esc_html( implode( ' ', explode( '_', $plugin_name ) ) ) ); ?></label></th>
-				<?php if ( is_string( $description ) && ! empty( $description ) ): ?>
-				<td><?php echo $description; ?></td>
-				<?php endif; ?>
+				<th><label for="tfi-plugin-<?php echo esc_attr( $plugin_name ); ?>"><?php echo esc_html( $plugin->pretty_name ); ?></label></th>
+				<td><?php echo esc_html( $plugin->version ); ?></td>
+				<td><i><?php echo esc_html( $plugin->description ); ?></i></td>
 			</tr>
 			<?php endforeach; ?>
 		</table>

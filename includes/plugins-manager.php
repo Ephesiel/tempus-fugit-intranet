@@ -19,6 +19,7 @@ class PluginsManager {
      * 
      * @since 1.3.0
      * @access private
+     * @static
      * 
      * @var array
      */
@@ -31,6 +32,7 @@ class PluginsManager {
      * 
      * @since 1.3.0
      * @access public
+     * @static
      * 
      * @param string $plugin_name   The name of the plugin to get
      * @return SubPlugin            The asking plugin
@@ -55,6 +57,7 @@ class PluginsManager {
      * 
      * @since 1.3.0 
      * @access private
+     * @static
      */
     public static function instantiate_plugins() {
         /**
@@ -124,6 +127,9 @@ class PluginsManager {
  */
 class SubPlugin {
     public $name;
+    public $pretty_name;
+    public $description;
+    public $version;
     private $enable;
     private $main_file;
     private $uninstall_file;
@@ -133,6 +139,11 @@ class SubPlugin {
         $this->enable           = $enable;
         $this->main_file        = $main_file;
         $this->uninstall_file   = $uninstall_file;
+
+        /**
+         * Create variable according to the first comment of the main file
+         */
+        $this->read_first_comment();
 
         if ( $enable ) {
             $this->include_main_file();
@@ -149,6 +160,96 @@ class SubPlugin {
      */
     private function include_main_file() {
         include_once $this->main_file;
+    }
+
+    /**
+     * Read_first_comment.
+     * 
+     * Read the first comment of the plugin to get datas
+     * 
+     * @since 1.3.0
+     * @access private
+     */
+    private function read_first_comment() {
+        $content = file_get_contents( $this->main_file );
+
+        if ( $content === false ) {
+            $this->get_comment_values();
+            return;
+        }
+
+        $comment_begin = strpos( $content, '/**' );
+
+        if ( $comment_begin === false ) {
+            $this->get_comment_values();
+            return;
+        }
+
+        $content = substr( $content, $comment_begin + 3 );
+        $comment_end = strpos( $content, '*/' );
+
+        if ( $comment_end === false ) {
+            $this->get_comment_values();
+            return;
+        }
+
+        $content = substr( $content, 0, $comment_end );
+        $content = explode( "\n", $content );
+        $plugin_parameters = array();
+
+        foreach ( $content as $value ) {
+            /**
+             * Each parameters should be separate from its value by a ':'
+             * The value possess some of ':' so we just need to know the first
+             */
+            $separator = strpos( $value, ':' );
+
+            /**
+             * This is not a valid key/value pair
+             */
+            if ( $separator === false ) {
+                continue;
+            }
+
+            /**
+             * Remove every '*' and space before and after the key
+             */
+            $comment_key = trim( substr( $value, 0, $separator ), '* ' );
+
+            /**
+             * Remove spaces before and after the value
+             */
+            $comment_value = trim( substr( $value, $separator + 1 ), ' ' );
+            
+            $plugin_parameters[$comment_key] = $comment_value;
+        }
+
+        $this->get_comment_values( $plugin_parameters );
+    }
+
+    /**
+     * Get_comment_values.
+     * 
+     * Given parameters will be given to the object
+     * If a wanted parameter doesn't exist, return the default value
+     * 
+     * @since 1.3.0
+     * @access private
+     * 
+     * @param array $parameters     Contains all parameters of the plugin
+     */
+    private function get_comment_values( $parameters = array() ) {
+        $default_parameters = array(
+            'Plugin Name' => ucfirst( implode( ' ', explode( '_', $this->name ) ) ),
+            'Description' => '',
+            'Version' => ''
+        );
+
+        $parameters = array_merge( $default_parameters, $parameters );
+        
+        $this->pretty_name  = $parameters['Plugin Name'];
+        $this->description  = $parameters['Description'];
+        $this->version      = $parameters['Version'];
     }
 
     /**
