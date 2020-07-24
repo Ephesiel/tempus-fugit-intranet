@@ -1,0 +1,3 @@
+[submodule "plugins/tfi/echo"]
+	path = plugins/tfi/echo
+	url = git@github.com:Ephesiel/tfi-echo-plugins.git
