@@ -37,31 +37,6 @@ class ShortcodesManager {
      */
     private $database_result;
 
-    /**
-     * Fatal_error.
-     * 
-     * Contain the fatal error return by the database
-     * This value is null if no fatal error
-     * 
-     * @since 1.1.5
-     * @access private
-     * 
-     * @var string|null
-     */
-    private $fatal_error;
-
-    /**
-     * Different_fields_version.
-     * 
-     * Set to true if fields have been updated, and post datas are still here
-     * 
-     * @since 1.2.3
-     * @access private
-     * 
-     * @var true|null
-     */
-    private $different_fields_version;
-
 	/**
 	 * ShortcodesManager constructor.
 	 *
@@ -116,14 +91,26 @@ class ShortcodesManager {
          */
         if ( $this->user->is_ok() && ( ! empty( $posts ) || ! empty( $files ) ) ) {
             if ( array_key_exists( 'tfi_fields_version', $_POST ) && $_POST['tfi_fields_version'] != tfi_get_option( 'tfi_fields_version' ) ) {
-                $this->different_fields_version = true;
+                /**
+                 * Display an error if the version is different
+                 */
+                add_filter( 'tfi_user_form_error', array( $this, 'error_different_fields_version' ) );
             }
             else {
                 try {
                     $this->database_result = $this->user->send_new_datas( $posts, $files );
+                    if ( $this->database_result === false ) {
+                        /**
+                         * Error when push into database
+                         */
+                        add_filter( 'tfi_user_form_error', array( $this, 'error_database_problem' ) );
+                    }
                 }
-                catch( \Exception $e ) {
-                    $this->fatal_error = $e->getMessage();
+                catch( \Exception $exc ) {
+                    /**
+                     * Display a database fatal error
+                     */
+                    add_filter( 'tfi_user_form_error', function( $err ) use( $exc ) { return $this->error_fatal( $err, $exc->getMessage() ); } );
                 }
             }
         }
@@ -150,20 +137,21 @@ class ShortcodesManager {
      */
     public function display_user_form( $atts = array(), $content = null, $tag = '' ) {
         $atts = array_change_key_case( (array)$atts, CASE_LOWER );
-        $output = '';
 
+        // If the user isn't okay, we should display a fatal error and no form
         if ( ! $this->user->is_ok() ) {
-            return $this->get_error( 'not_register' );
+            return $this->error_not_register();
         }
-        if ( $this->different_fields_version === true ) {
-            $output .= $this->get_error( 'different_fields_version' );
-        }
-        if ( $this->database_result === false ) {
-            $output .= $this->get_error( 'database_problem' );
-        }
-        if ( $this->fatal_error !== null ) {
-            $output .= $this->get_error( 'fatal' );
-        }
+
+        /**
+         * This hook allows other plugins to add an error in the form easily
+         * You can wrap the error on a div with the class error to have a pretty display.
+         * 
+         * @param string The error to display.
+         * 
+         * @since 1.3.0
+         */
+        $output = apply_filters( 'tfi_user_form_error', '' );
 
         $user_fields = $this->user->allowed_fields();
 
@@ -567,55 +555,45 @@ class ShortcodesManager {
         return $html;
     }
 
-    /**
-     * Get_error.
-     * 
-     * Display an error in a big div
-     * 
-     * @since 1.0.0
-     * @param string $callback the specific error method to call. Default ''.
-     * @return string the html content of the error
-     */
-    private function get_error( $callback = '' ) {
-
-        $e = '<div class="error">';
-        $e.=    method_exists( $this, 'error_' . $callback ) ? call_user_func( array( $this, 'error_' . $callback ) ) : esc_html__( 'An error occured' );
-        $e.= '</div>';
-
-        return $e;
+    public function error_not_register() {
+        $err  = '<div class="error">';
+        $err .=     esc_html__( 'Sorry, you don\'t have any role yet.' ) . '<br />';
+        $err .=     esc_html__( 'Please wait that your administator register your account and try again.' );
+        $err .= '</div>';
+        
+        return $err;
     }
 
-    private function error_not_register() {
-        $e = esc_html__( 'Sorry, you don\'t have any role yet.' ) . '<br />';
-        $e.= esc_html__( 'Please wait that your administator register your account and try again.' );
-
-        return $e;
-    }
-
-    private function error_database_problem() {
+    public function error_database_problem( $err ) {
         /**
          * When you get this error, you can verify into database, maybe the user has been deleted
          * Indeed, the database do an update of an existing user, the user MUST exists in ddb-prefix_tfi_datas
          */
-        $e = esc_html__( 'The database response failed for an unknown reason. Maybe you\'re not connected.' ) . '<br />';
-        $e.= esc_html__( 'If you\'re connected it can be a database error and files can have been pushed.' ) . '<br />';
-        $e.= esc_html__( 'Please refer to your administrator about this error.' );
-
-        return $e;
+        $err .= '<div class="error">';
+        $err .=     esc_html__( 'The database response failed for an unknown reason. Maybe you\'re not connected.' ) . '<br />';
+        $err .=     esc_html__( 'If you\'re connected it can be a database error and files can have been pushed.' ) . '<br />';
+        $err .=     esc_html__( 'Please refer to your administrator about this error.' );
+        $err .= '</div>';
+        
+        return $err;
     }
 
-    private function error_fatal() {
-        $e = '<b>' . esc_html( __( 'Fatal error:' ) ) . '</b> ' . esc_html( $this->fatal_error ) . '<br/>';
-        $e.= esc_html__( 'A fatal error is an unexpected, unwanted error which is not due to your for most cases. Please try again and if the error still appear, contact your support.' ) . '<br />';
-        $e.= esc_html__( 'You should consider that your datas are not saved.' );
-
-        return $e;
+    public function error_fatal( $err, $error ) {
+        $err .= '<div class="error">';
+        $err .=     '<b>' . esc_html( __( 'Fatal error:' ) ) . '</b> ' . esc_html( $error ) . '<br/>';
+        $err .=     esc_html__( 'A fatal error is an unexpected, unwanted error which is not due to your for most cases. Please try again and if the error still appear, contact your support.' ) . '<br />';
+        $err .=     esc_html__( 'You should consider that your datas are not saved.' );
+        $err .= '</div>';
+        
+        return $err;
     }
 
-    private function error_different_fields_version() {
-        $e = esc_html__( 'Some fields of your form have been changed by an administrator' ) . '<br />';
-        $e.= esc_html__( 'Please re-submit the form or close this page to remove this message' );
-
-        return $e;
+    public function error_different_fields_version( $err ) {
+        $err .= '<div class="error">';
+        $err .=     esc_html__( 'Some fields of your form have been changed by an administrator' ) . '<br />';
+        $err .=     esc_html__( 'Please re-submit the form or close this page to remove this message' );
+        $err .= '</div>';
+        
+        return $err;
     }
 }
