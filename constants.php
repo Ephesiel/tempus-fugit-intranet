@@ -12,7 +12,7 @@ define( 'TFI_PATH', plugin_dir_path( __FILE__ ) );
 
 define( 'TFI_TEMP_PATH', TFI_PATH . 'tmp/');
 if ( ! file_exists( TFI_TEMP_PATH ) ) {
-	mkdir( TFI_TEMP_PATH );
+	wp_mkdir_p( TFI_TEMP_PATH );
 }
 
 define( 'TFI_TEMPLATE_PAGE', 'tfi-user-page.php' );

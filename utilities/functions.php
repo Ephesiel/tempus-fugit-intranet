@@ -186,16 +186,24 @@ if ( ! function_exists( 'tfi_add_temp_folder' ) ) {
      * Add a new temporary folder
      * 
      * @since 1.1.5
-     * @return string the new temporary folder path
+     * @since 1.3.0     Add the possibility to create a temp folder with a specific name
+     * 
+     * @param string    $temp_folder_name   The name of the folder to create, default is empty and will create a random folder name
+     * @return string                       The new temporary folder path
      */
-    function tfi_add_temp_folder() {
-        $temp_folder_name;
-
-        do {
+    function tfi_add_temp_folder( $temp_folder_name = '' ) {
+        if ( ! empty( $temp_folder_name ) ) {
+            if ( ! file_exists( $temp_folder_name ) ) {
+                wp_mkdir_p( $temp_folder_name );
+            }
+        }
+        else {
             do {
                 $temp_folder_name = TFI_TEMP_PATH . bin2hex( random_bytes( 8 ) );
             } while ( file_exists( $temp_folder_name ) );
-        } while ( ! mkdir( $temp_folder_name ) );
+
+            wp_mkdir_p( $temp_folder_name );
+        }
 
         return $temp_folder_name . '/';
     }
