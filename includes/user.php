@@ -326,6 +326,7 @@ class User {
             if ( isset( $changes[$field->name] ) ) {
                 /**
                  * When a user data has changed, allow to customize the new value
+                 * It is specific for each field
                  * 
                  * @param mixed     The new value for the field to insert
                  * @param User      User whom data has been modified
@@ -335,7 +336,7 @@ class User {
                  * 
                  * @since 1.3.0
                  */
-                $changes[$field->name] = apply_filters( 'tfi_user_data_changed', $changes[$field->name], $this, $field );
+                $changes[$field->name] = apply_filters( 'tfi_user_data_changed_' . $field->name, $changes[$field->name], $this, $field );
             }
         }
 
@@ -430,6 +431,21 @@ class User {
             break;
         }
 
+        /**
+         * This hooks allows to change the path of a file.
+         * This hook cannot be specific for each field because multiple file field have a different name and it's not possible to know how many of field it will count.
+         * The verification of the field needs to be done inside the filter method.
+         * 
+         * @param string    The relative path (user folder) from the tfi upload dir
+         * @param User      User for the field
+         * @param Field     The file field where the file changed
+         * 
+         * @return string   The relative path changed by the filter
+         * 
+         * @since 1.3.0
+         */
+        $sanitation = apply_filters( 'tfi_field_file_path', $sanitation, $this, $field );
+
         if ( $sanitation === false ) {
             $to_return['result']['tfi-error'] = $field_sanitizor->last_error();
             return $to_return;
@@ -440,6 +456,7 @@ class User {
         $old_value              = $field->get_value_for_user( $this, 'upload_path' );
 
 
+        // Remove the old value if exists
         if ( $old_value !== '' && ! $file_manager->remove_file( $old_value ) ) {
             $to_return['result']['tfi-error'] = __( 'The old image failed to removed' );
         }
@@ -559,7 +576,9 @@ class User {
         $changed_fields = array();
 
         foreach ( $datas_to_changed as $field_name => $change ) {
-            $changed_fields[$field_name] = $this->allowed_fields()[$field_name];
+            if ( array_key_exists( $field_name, $this->allowed_fields() ) ) {
+                $changed_fields[$field_name] = $this->allowed_fields()[$field_name];
+            }
         }
 
         /**

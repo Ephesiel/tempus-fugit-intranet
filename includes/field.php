@@ -53,6 +53,63 @@ class Field {
         return $this->type === 'multiple';
     }
 
+
+    /**
+     * Is_multiple_file.
+     * 
+     * Return if the field is a file or a multiple field containing file
+     * 
+     * @since 1.3.0
+     * @access public
+     * 
+     * @return bool    Is this field a multiple file field
+     */
+    public function is_multiple_file() {
+        if ( $this->is_file() ) {
+            return true;
+        }
+
+        if ( ! $this->is_multiple() ) {
+            return false;
+        }
+
+        return $this->get_field_for_index( 0 )->is_multiple_file();
+    }
+
+    /**
+     * Get_parent.
+     * 
+     * Return the parent element, if the element has no parent, return itself
+     * 
+     * @since 1.3.0
+     * @access public
+     * 
+     * @return Field    The parent
+     */
+    public function get_parent() {
+        return $this->parent === null ? $this : $this->parent;
+    }
+
+    /**
+     * Get_oldest_parent.
+     * 
+     * Return the first parent field of this field.
+     * 
+     * @since 1.3.0
+     * @access public
+     * 
+     * @return Field    The oldest parent 
+     */
+    public function get_oldest_parent() {
+        $parent = $this;
+
+        while ( $parent->parent !== null ) {
+            $parent = $parent->parent;
+        }
+
+        return $parent;
+    }
+
     /**
      * Default_value.
      * 
@@ -152,7 +209,7 @@ class Field {
      * @return  mixed           The value for this field and this user
      * @return  null            If the user don't have any access
      */
-    public function get_value_for_user( $user, $type = 'real_url'  ) {
+    public function get_value_for_user( &$user, $type = 'real_url'  ) {
         $field   = $this;
         $indexes = array();
 

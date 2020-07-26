@@ -263,7 +263,7 @@ if ( ! function_exists( 'tfi_get_user_file_folder_path' ) ) {
             }
     
             while ( $subdir != $parent_folder ) {
-                $subdirs = '/' .$subdir . $subdirs;
+                $subdirs = '/' . $subdir . $subdirs;
                 $subdir = $all_folders[$subdir]['parent'];
             }
         }
