@@ -128,6 +128,7 @@ class ShortcodesManager {
      *      -   prefixs => string   => Prefixs separate by comma. all fields which begin by one of those prefix will be display on the form.
      *      -   suffixs => string   => Same ad 'prefixs' but with suffixs
      *      -   not-*   => string   => fields, prefixs or suffixs, will not take fields with those values
+     *      -   invisible_fields    => bool => Is invisble fields appears or not (mostly for plugins fields)
      * 
      * If none of the three last arguments are set, all fields will be displayed
      * 
@@ -154,6 +155,19 @@ class ShortcodesManager {
         $output = apply_filters( 'tfi_user_form_error', '' );
 
         $user_fields = $this->user->allowed_fields();
+
+        /**
+         * If the 'invisible_fields' argument is not set, we don't show invisible fields (mostly plugins fields)
+         */
+        if ( ! array_key_exists( 'invisible_fields', $atts ) || ! $atts['invisible_fields'] ) {
+            $fields_option = tfi_get_option( 'tfi_fields' );
+
+            foreach ( $user_fields as $field_name => $field_object ) {
+                if ( ! $fields_option[$field_name]['admin_visible'] ) {
+                    unset( $user_fields[$field_name] );
+                }
+            }
+        }
 
         if ( array_key_exists( 'fields', $atts ) || array_key_exists( 'prefixs', $atts ) || array_key_exists( 'suffixs', $atts ) ) {
             $fields = array_key_exists( 'fields', $atts ) ? explode( ',', $atts['fields'] ) : array();
