@@ -100,7 +100,7 @@ class FieldSanitizor {
     public function sanitize_number_field( $number, $special_params ) {
         $sanitize = filter_var( $number, FILTER_SANITIZE_NUMBER_INT );
 
-        if ( ! empty( $sanitize ) ) {
+        if ( ! empty( $sanitize ) || $sanitize == 0 ) {
             if ( $special_params['min'] > $special_params['max'] || ( $sanitize >= $special_params['min'] && $sanitize <= $special_params['max'] ) ) {
                 return $sanitize;
             }
