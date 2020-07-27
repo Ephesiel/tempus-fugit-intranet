@@ -481,6 +481,7 @@ class OptionsManager {
          * @param array All already existing file folders
          */
         $fields = apply_filters( 'tfi_fields_update', $fields );
+        
         if ( ! is_array( $fields ) ) {
             return self::$default_options['tfi_fields'];
         }

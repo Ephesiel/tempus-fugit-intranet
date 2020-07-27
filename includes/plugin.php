@@ -47,19 +47,19 @@ class Plugin {
     }
 
     private function addAdminOption() {
-        require TFI_PATH . 'includes/admin-panel.php';
+        require_once TFI_PATH . 'includes/admin-panel.php';
 
         new AdminPanelManager();
     }
     
     private function addFormManager() {
-        require TFI_PATH . 'includes/connection-form.php';
+        require_once TFI_PATH . 'includes/connection-form.php';
 
         new ConnectionFormManager();
 	}
 	
 	private function addSortcodesManager() {
-        require TFI_PATH . 'includes/shortcodes.php';
+        require_once TFI_PATH . 'includes/shortcodes.php';
 
         new ShortcodesManager();
 	}

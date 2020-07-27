@@ -79,16 +79,16 @@ class AdminPanelManager {
 
 			<form method="post" action="options.php">
 				<?php settings_fields( 'tfi_general_options' ); ?>
-				<?php do_settings_sections( 'connection-form' ); ?>
-				<?php do_settings_sections( 'general-user' ); ?>
-				<?php do_settings_sections( 'plugins' ); ?>
+				<?php do_settings_sections( 'tfi-connection-form' ); ?>
+				<?php do_settings_sections( 'tfi-general-user' ); ?>
+				<?php do_settings_sections( 'tfi-plugins' ); ?>
 				<?php submit_button(); ?>
 			</form>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'tfi_users_fields' ); ?>
-				<?php do_settings_sections( 'folders' ); ?>
-				<?php do_settings_sections( 'fields' ); ?>
-				<?php do_settings_sections( 'users' ); ?>
+				<?php do_settings_sections( 'tfi-folders' ); ?>
+				<?php do_settings_sections( 'tfi-fields' ); ?>
+				<?php do_settings_sections( 'tfi-users' ); ?>
 				<?php submit_button(); ?>
 			</form>
         </div>
@@ -199,14 +199,14 @@ class AdminPanelManager {
 			'connection_form_options_id',
 			__( 'Connection form shortcut' ),
 			array( $this, 'display_connection_form_section' ),
-			'connection-form'
+			'tfi-connection-form'
 		);
 
 		add_settings_field(
 			'modifier_keys_id',
 			__( 'Modifier keys used' ),
 			array( $this, 'modifier_keys_callback' ),
-			'connection-form',
+			'tfi-connection-form',
 			'connection_form_options_id'
 		);
 
@@ -214,7 +214,7 @@ class AdminPanelManager {
 			'key_id',
 			__( 'The key to press' ),
 			array( $this, 'key_callback' ),
-			'connection-form',
+			'tfi-connection-form',
 			'connection_form_options_id'
 		);
 
@@ -222,14 +222,14 @@ class AdminPanelManager {
 			'general_user_options_id',
 			__( 'General user options' ),
 			array( $this, 'display_general_user_section' ),
-			'general-user'
+			'tfi-general-user'
 		);
 
 		add_settings_field(
 			'user_page_id',
 			__( 'Intranet user page' ),
 			array( $this, 'user_page_callback' ),
-			'general-user',
+			'tfi-general-user',
 			'general_user_options_id'
 		);
 
@@ -237,7 +237,7 @@ class AdminPanelManager {
 			'user_types_id',
 			__( 'User types' ),
 			array( $this, 'user_types_callback' ),
-			'general-user',
+			'tfi-general-user',
 			'general_user_options_id'
 		);
 
@@ -245,7 +245,7 @@ class AdminPanelManager {
 			'plugins_id',
 			__( 'Plugins' ),
 			array( $this, 'plugins_callback' ),
-			'general-user',
+			'tfi-general-user',
 			'general_user_options_id'
 		);
 
@@ -253,21 +253,21 @@ class AdminPanelManager {
 			'folders_option_id',
 			__( 'File folders' ),
 			array( $this, 'display_folders_section' ),
-			'folders'
+			'tfi-folders'
 		);
 
 		add_settings_section(
 			'fields_options_id',
 			__( 'Fields' ),
 			array( $this, 'display_fields_section' ),
-			'fields'
+			'tfi-fields'
 		);
 
 		add_settings_section(
 			'users_options_id',
 			__( 'Users' ),
 			array( $this, 'display_users_section' ),
-			'users'
+			'tfi-users'
 		);
 	}
 
