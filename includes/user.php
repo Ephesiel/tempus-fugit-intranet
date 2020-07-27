@@ -162,7 +162,7 @@ class User {
             $allowed_fields = array();
 
             foreach ( tfi_get_option( 'tfi_fields' ) as $slug => $field ) {
-                if ( in_array( $this->user_type(), $field['users'] ) || in_array( $slug, $this->cache['special_fields'] ) ) {
+                if ( in_array( $this->user_type(), $field['users'], true ) || in_array( $slug, $this->cache['special_fields'], true ) ) {
                     $allowed_fields[$slug] = new Field( $slug, $field['real_name'], $field['default'], $field['type'], $field['special_params'] );
                 }
             }

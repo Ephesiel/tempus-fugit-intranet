@@ -70,7 +70,7 @@ class FieldSanitizor {
                 $domains = $special_params['mandatory_domains'];
                 $domain = parse_url( $sanitize, PHP_URL_HOST );
 
-                if ( in_array( $domain, $domains ) || ( substr( $domain, 0, 4 ) === 'www.' && in_array( substr( $domain, 4 ), $domains ) ) ) {
+                if ( in_array( $domain, $domains, true ) || ( substr( $domain, 0, 4 ) === 'www.' && in_array( substr( $domain, 4 ), $domains, true ) ) ) {
                     return $sanitize;
                 }
 

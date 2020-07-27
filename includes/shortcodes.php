@@ -201,7 +201,7 @@ class ShortcodesManager {
         $to_return = array();
 
         foreach ( $fields_to_look_at as $field_slug => $field_value ) {
-            if ( in_array( $field_slug, $required_fields ) ) {
+            if ( in_array( $field_slug, $required_fields, true ) ) {
                 $to_return[$field_slug] = $field_value;
                 continue;
             }

@@ -173,7 +173,7 @@ class Api {
             foreach ( $user_templates as $template_id => $template_value ) {
                 array_push( $templates, new Template( $template_id, $template_value, $campain_name ) );
             }
-            if ( ! in_array( $campain_name, $campains ) ) {
+            if ( ! in_array( $campain_name, $campains, true ) ) {
                 array_push( $campains, $campain_name );
             }
         }

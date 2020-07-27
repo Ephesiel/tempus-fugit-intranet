@@ -44,7 +44,8 @@ class OptionsManager {
         'tfi_file_folders' => array(
             'user_folder' => array(
                 'display_name' => 'User folder',
-                'parent' => ''
+                'parent' => '',
+                'admin_visible' => true
             )
         ),
         'tfi_field_types' => array(
@@ -61,6 +62,7 @@ class OptionsManager {
                 'real_name' => 'My links',
                 'type' => 'multiple',
                 'default' => '',
+                'admin_visible' => true,
                 'users' => array( 'default_type' ),
                 'special_params' => array(
                     'min_length' => 0,
@@ -79,6 +81,7 @@ class OptionsManager {
                 'real_name' => 'Short description',
                 'type' => 'text',
                 'default' => '',
+                'admin_visible' => true,
                 'users' => array( 'default_type' ),
                 'special_params' => array()
             ),
@@ -86,6 +89,7 @@ class OptionsManager {
                 'real_name' => 'Age',
                 'type' => 'number',
                 'default' => '',
+                'admin_visible' => true,
                 'users' => array( 'default_type' ),
                 'special_params' => array(
                     'min' => 0,
@@ -96,6 +100,7 @@ class OptionsManager {
                 'real_name' => 'Favorite color',
                 'type' => 'color',
                 'default' => '',
+                'admin_visible' => true,
                 'users' => array( 'default_type' ),
                 'special_params' => array()
             ),
@@ -103,6 +108,7 @@ class OptionsManager {
                 'real_name' => 'Avatar',
                 'type' => 'image',
                 'default' => '',
+                'admin_visible' => true,
                 'users' => array( 'default_type' ),
                 'special_params' => array(
                     'width' => 300,
@@ -194,7 +200,7 @@ class OptionsManager {
      * @access public
      * 
      * @return mixed    the sanitize value of an option.
-     * @return false    the option doesn't exist
+     * @return null     the option doesn't exist
      */
     public function verify_option( $option_name, $value ) {
         if ( array_key_exists( $option_name, self::$default_options ) ) {
@@ -204,7 +210,7 @@ class OptionsManager {
             return call_user_func( array( $this, 'verify_' . $option_name ), $value );
         }
 
-        return false;
+        return null;
     }
 
     /**
@@ -218,6 +224,52 @@ class OptionsManager {
      */
     public static function get_parent_file_folder_slug() {
         return array_key_first( self::$default_options['tfi_file_folders'] );
+    }
+
+    /**
+     * Get_visible_file_folders.
+     * 
+     * Only return file folders which are visible, useful on admin panel
+     * 
+     * @since 1.3.0
+     * @access public
+     * @static
+     * 
+     * @return array    All file folders which are visible
+     */
+    public static function get_visible_file_folders() {
+        $folders = tfi_get_option( 'tfi_file_folders' );
+        
+        foreach( $folders as $key => $value ) {
+            if ( ! $value['admin_visible'] ) {
+                unset( $folders[$key] );
+            }
+        }
+
+        return $folders;
+    }
+
+    /**
+     * Get_visible_fields.
+     * 
+     * Only return fields which are visible, useful on admin panel
+     * 
+     * @since 1.3.0
+     * @access public
+     * @static
+     * 
+     * @return array    All fields which are visible
+     */
+    public static function get_visible_fields() {
+        $fields = tfi_get_option( 'tfi_fields' );
+        
+        foreach( $fields as $key => $value ) {
+            if ( ! $value['admin_visible'] ) {
+                unset( $fields[$key] );
+            }
+        }
+
+        return $fields;
     }
 
     /**
@@ -347,25 +399,43 @@ class OptionsManager {
      * @return array                $file_folders sanitized
      */
     private function verify_file_folders( $file_folders ) {
+        /**
+         * This hook allows subplugins to add their own file folders.
+         * You don't have to be afraid about duplicate field name or conflict because the sanitation is done after the filter
+         * If you don't want that your field be changed by the admin, you can to add the key 'admin_visible' => false on the folder
+         * 
+         * @since 1.3.0
+         * 
+         * @param array All already existing file folders
+         */
+        $file_folders = apply_filters( 'tfi_file_folders_update', $file_folders );
+
         if ( ! is_array( $file_folders ) ) {
             return self::$default_options['tfi_file_folders'];
         }
 
         $new_file_folders = self::$default_options['tfi_file_folders'];
         $default_parent_folder = array_key_first( $new_file_folders );
+
         foreach ( $file_folders as $file_folder_slug => $file_folder ) {
             if ( isset( $file_folder['display_name'] ) ) {
-                $sanitize_file_folder_name = filter_var( $file_folder['display_name'], FILTER_SANITIZE_STRING );
-                $sanitize_file_folder_slug = $this->create_slug_from_string( $sanitize_file_folder_name );
-                $sanitize_file_folder_parent = $default_parent_folder;
+                $sanitize_file_folder_name          = filter_var( $file_folder['display_name'], FILTER_SANITIZE_STRING );
+                $sanitize_file_folder_slug          = $this->create_slug_from_string( $sanitize_file_folder_name );
+                $sanitize_file_folder_parent        = $default_parent_folder;
+                $sanitize_file_folder_admin_visible = true;
 
                 if ( isset( $file_folder['parent'] ) ) {
                     $sanitize_file_folder_parent = filter_var( $file_folder['parent'], FILTER_SANITIZE_STRING );
                 }
+
+                if ( isset( $file_folder['admin_visible'] ) ) {
+                    $sanitize_file_folder_admin_visible = filter_var( $file_folder['admin_visible'], FILTER_VALIDATE_BOOLEAN );
+                }
                 
                 if ( ! array_key_exists( $sanitize_file_folder_slug, $new_file_folders ) && ! empty( $sanitize_file_folder_slug ) ) {
-                    $new_file_folders[$sanitize_file_folder_slug]['display_name'] = $sanitize_file_folder_name;
-                    $new_file_folders[$sanitize_file_folder_slug]['parent'] = $sanitize_file_folder_parent;
+                    $new_file_folders[$sanitize_file_folder_slug]['display_name']   = $sanitize_file_folder_name;
+                    $new_file_folders[$sanitize_file_folder_slug]['parent']         = $sanitize_file_folder_parent;
+                    $new_file_folders[$sanitize_file_folder_slug]['admin_visible']  = $sanitize_file_folder_admin_visible;
                 }
             }
         }
@@ -375,13 +445,18 @@ class OptionsManager {
          * Obviously, the parent should be different that himself
          */
         foreach ( $new_file_folders as $new_file_folder_slug => $new_file_folder_datas ) {
-            $parent_slug = $new_file_folder_datas['parent'];
-            if ( ! array_key_exists( $parent_slug, $new_file_folders ) || $parent_slug === $new_file_folder_slug ) {
-                $new_file_folder_datas['parent'] = $default_parent_folder;
+            /**
+             * The default parent has no parent and is the only one to have no parent
+             */
+            if ( $new_file_folder_slug != $default_parent_folder ) {
+                $parent_slug = $new_file_folder_datas['parent'];
+                if ( ! array_key_exists( $parent_slug, $new_file_folders ) || $parent_slug === $new_file_folder_slug ) {
+                    $new_file_folders[$new_file_folder_slug]['parent'] = $default_parent_folder;
+                }
             }
         }
 
-        return $new_file_folders;
+        return $new_file_folders; 
     }
 
     /**
@@ -396,6 +471,16 @@ class OptionsManager {
      * @return array            $fields sanitized
      */
     private function verify_fields( $fields ) {
+        /**
+         * This hook allows subplugins to add their own file fields.
+         * You don't have to be afraid about duplicate field name or conflict because the sanitation is done after the filter
+         * If you don't want that your field be changed by the admin, you can to add the key 'admin_visible' => false on the folder
+         * 
+         * @since 1.3.0
+         * 
+         * @param array All already existing file folders
+         */
+        $fields = apply_filters( 'tfi_fields_update', $fields );
         if ( ! is_array( $fields ) ) {
             return self::$default_options['tfi_fields'];
         }
@@ -410,6 +495,7 @@ class OptionsManager {
                 'real_name'      => 'No name set',
                 'type'		     => 'text',
                 'default'	     => '',
+                'admin_visible'  => true,
                 'users' 	     => array(),
                 'special_params' => array()
             );
@@ -422,6 +508,9 @@ class OptionsManager {
             }
             if ( isset( $field_value['default'] ) ) {
                 $sanitize_field_value['default'] = filter_var( $field_value['default'], FILTER_SANITIZE_STRING );
+            }
+            if ( isset( $field_value['admin_visible'] ) ) {
+                $sanitize_field_value['admin_visible'] = filter_var( $field_value['admin_visible'], FILTER_VALIDATE_BOOLEAN );
             }
             if ( isset( $field_value['users'] ) && is_array( $field_value['users'] ) ){
                 foreach ( $field_value['users'] as $user_type ) {

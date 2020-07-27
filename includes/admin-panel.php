@@ -9,8 +9,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Manager of the plugin admin panel
  *
  * Manage all options and html page in the admin panel
+ * Connect each option update with the sanitize method in OptionsManager class
  *
+ * Since 1.3.0, all values send by the form in option page NEEDS to be arrays.
+ * You should always add a certification input before each option to tell the sanitation that the option has been send by the option admin page.
+ * You should always check this certification in sanitation method to santize the value as sent by the form.
+ * 
+ * See AdminPanelManager::is_value_certified and AdminPanelManager::certify_option to more information
+ * 
  * @since 1.0.0
+ * @since 1.3.0		Option sanitation method updated
  */
 class AdminPanelManager {
 
@@ -263,6 +271,72 @@ class AdminPanelManager {
 		);
 	}
 
+	/**
+	 * Certify_option.
+	 * 
+	 * This method should be call before each option inputs.
+	 * It will add a specific key of this option.
+	 * When the data will be send, if the key exists, the sanitize method will be sanitize output like expected on the form.
+	 * If the key do not exists, it means that the value isn't passed by this form and we don't need to sanitize it.
+	 * 
+	 * @since 1.3.0
+	 * @access private
+	 * 
+	 * @param string $option_name	The option name to put an certified input
+	 * 
+	 * @see is_value_certified
+	 * @see verify_option
+	 */
+	private function certify_option( $option_name ) {
+		?>
+		<input type="hidden" name="<?php echo esc_attr( $option_name ); ?>[certification_option_key]" value="true" />
+		<?php
+	}
+
+	/**
+	 * Is_value_certified.
+	 * 
+	 * This method should be call before each sanitation method.
+	 * Return if the given value as a certfied key given by the form.
+	 * If yes, delete it because it is useless and sanitize as if the value was sent by the form.
+	 * If no, just sanitize the option normally.
+	 * 
+	 * @since 1.3.0
+	 * @access private
+	 * 
+	 * @param array	$value	The given value, it should be an array. This is a reference to be able to delete the certification key.
+	 * 
+	 * @see certify_option
+	 * @see verify_option
+	 */
+	private function is_value_certified( &$value ) {
+		if ( isset( $value['certification_option_key'] ) ) {
+			unset( $value['certification_option_key'] );
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Verify_option.
+	 * 
+	 * This method verify an option by given a name and a value.
+	 * Don't forget to check is_value_certified to be sure if you need a specific sanitation before calling OptionsManager.
+	 * 
+	 * @since 1.3.0		Refactorization
+	 * @access private
+	 * 
+	 * @see certify_option
+	 * @see is_value_certified
+	 */
+	private function verify_option( $option_name, $option_value ) {
+		require_once TFI_PATH . 'includes/options.php';
+
+		$options_manager = new OptionsManager;
+		return $options_manager->verify_option( $option_name, $option_value );
+	}
+
     /**
 	 * Sanitize_shortcut.
      *
@@ -273,14 +347,15 @@ class AdminPanelManager {
 	 * @return array    $input sanitized
      */
     public function sanitize_shortcut( $input ) {
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_shortcut', $input );
+		}
+
 		if ( isset( $input['key'] ) ) {
 			$input['key'] = ord( strtoupper( sanitize_text_field( $input['key'] ) ) );
 		}
 
-		require_once TFI_PATH . 'includes/options.php';
-
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_shortcut', $input );
+		return $this->verify_option( 'tfi_shortcut', $input );
 	}
 	
 	/**
@@ -296,10 +371,13 @@ class AdminPanelManager {
 	 * @return          $input sanitized
 	 */
 	public function sanitize_user_page( $input ) {
-		require_once TFI_PATH . 'includes/options.php';
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_user_page_id', $input );
+		}
 
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_user_page_id', $input );
+		$user_page = isset( $input['page_id'] ) ? $input['page_id'] : tfi_get_option( 'tfi_user_page_id' );
+
+		return $this->verify_option( 'tfi_user_page_id', $user_page );
 	}
 	
 	/**
@@ -321,8 +399,12 @@ class AdminPanelManager {
 	 * @return          $input sanitized
 	 */
 	public function sanitize_user_types( $input ) {
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_user_types', $input );
+		}
+
         $option = tfi_get_option( 'tfi_user_types' );
-        
+
 		if ( isset ( $input["new_types"] ) && ! empty( $input["new_types"] ) ) {
             $option = array_merge( $option, explode( '%', $input['new_types'] ) );
 			unset( $input["new_types"] );
@@ -335,10 +417,7 @@ class AdminPanelManager {
 			}
         }
         
-		require_once TFI_PATH . 'includes/options.php';
-
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_user_types', $option );
+		return $this->verify_option( 'tfi_user_types', $option );
 	}
 
 	/**
@@ -352,6 +431,10 @@ class AdminPanelManager {
 	 * @return array	all plugins sanitized
 	 */
 	public function sanitize_plugins( $input ) {
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_plugins', $input );
+		}
+
 		/**
 		 * We need to know all plugins because the checkbox return something only if checked
 		 * Unchecked plugins doesn't exists
@@ -362,10 +445,7 @@ class AdminPanelManager {
 			$plugins[$plugin_name] = isset( $input[$plugin_name] );
 		}
         
-		require_once TFI_PATH . 'includes/options.php';
-
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_plugins', $plugins );
+		return $this->verify_option( 'tfi_plugins', $plugins );
 	}
 
 	/**
@@ -379,17 +459,18 @@ class AdminPanelManager {
 	 * @return 			$input sanitized
 	 */
 	public function sanitize_file_folders( $input ) {
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_file_folders', $input );
+		}
+
 		/**
 		 * This key is destroyed because it's only used in js
 		 */
 		if ( isset( $input['number_to_replace'] ) ) {
-            unset( $input['number_to_replace'] );
-        }
+			unset( $input['number_to_replace'] );
+		}
         
-		require_once TFI_PATH . 'includes/options.php';
-
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_file_folders', $input );
+		return $this->verify_option( 'tfi_file_folders', $input );
 	}
 	
 	/**
@@ -404,6 +485,10 @@ class AdminPanelManager {
 	 * @return          $input sanitized
 	 */
 	public function sanitize_fields( $input ) {
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_fields', $input );
+		}
+
 		/**
 		 * This key is destroyed because it's only used in js
 		 */
@@ -449,11 +534,8 @@ class AdminPanelManager {
                 $new_fields[$field['id']] = $field;
             }
 		}
-        
-		require_once TFI_PATH . 'includes/options.php';
-
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_fields', $new_fields );
+		
+		return $this->verify_option( 'tfi_fields', $new_fields );
 	}
 	
 	/**
@@ -468,6 +550,10 @@ class AdminPanelManager {
 	 * @return          $input sanitized
 	 */
 	public function sanitize_users( $input ) {
+		if ( ! $this->is_value_certified( $input ) ) {
+			return $this->verify_option( 'tfi_users', $input );
+		}
+
 		/**
 		 * This key is destroyed because it's only used in js
 		 */
@@ -490,12 +576,9 @@ class AdminPanelManager {
             else {
                 $new_users[$id] = $user;
             }
-        }
-        
-		require_once TFI_PATH . 'includes/options.php';
-
-		$options_manager = new OptionsManager;
-		return $options_manager->verify_option( 'tfi_users', $new_users );
+		}
+		
+		return $this->verify_option( 'tfi_users', $new_users );
 	}
 
 	/**
@@ -721,7 +804,7 @@ class AdminPanelManager {
 				 * When the value was an array for a single field
 				 * Place the first value of the old array as new value
 				 */
-				if ( in_array( $field_slug, $new_simple_fields ) && ! is_string( $field_value ) ) {
+				if ( in_array( $field_slug, $new_simple_fields, true ) && ! is_string( $field_value ) ) {
 					$value = array_shift( $field_value );
 					$changes[$field_slug] = $value !== null ? $value : '';
 				}
@@ -729,7 +812,7 @@ class AdminPanelManager {
 				 * When the value was a string for a multiple field
 				 * Replace the value by an array with the first value equal to the old value
 				 */
-				else if ( in_array( $field_slug, $new_multiple_fields ) && ! is_array( $field_value ) ) {
+				else if ( in_array( $field_slug, $new_multiple_fields, true ) && ! is_array( $field_value ) ) {
 					$changes[$field_slug] = array( $field_value );
 				}
 			}
@@ -786,7 +869,9 @@ class AdminPanelManager {
     }
 
     public function modifier_keys_callback() {
-		$shortcut = tfi_get_option( 'tfi_shortcut' )
+		$shortcut = tfi_get_option( 'tfi_shortcut' );
+		$this->certify_option( 'tfi_shortcut' );
+
 		?>
 		<label for="ctrl_key_used"><?php esc_html_e( 'Ctrl' ); ?></label>
 		<input type="checkbox" id="ctrl_key_used" name="tfi_shortcut[ctrl_key_used]" <?php echo $shortcut['ctrl_key_used'] ? 'checked ' : ''; ?>/>
@@ -817,8 +902,9 @@ class AdminPanelManager {
 		) );
 		$actual_page_id = tfi_get_option( 'tfi_user_page_id' );
 		
+		$this->certify_option( 'tfi_user_page_id' );
 		if ( ! empty( $pages ) ): ?>
-		<select name="tfi_user_page_id">
+		<select name="tfi_user_page_id[page_id]">
 			<?php
 			foreach( $pages as $page ) {
 				?>
@@ -838,6 +924,7 @@ class AdminPanelManager {
 	}
 
 	public function user_types_callback() {
+		$this->certify_option( 'tfi_user_types' );
 		?>
 		<i><?php esc_html_e( 'Checked types will be deleted' ); ?></i>
 		<ul role="list" class="tfi-user-list">
@@ -854,6 +941,7 @@ class AdminPanelManager {
 	}
 
 	public function plugins_callback() {
+		$this->certify_option( 'tfi_plugins' );
 		?>
 		<table class="tfi-options-table">
 			<?php foreach ( tfi_get_option( 'tfi_plugins' ) as $plugin_name => $enable ):
@@ -877,8 +965,10 @@ class AdminPanelManager {
 	public function display_folders_section() {
 		require_once TFI_PATH . 'includes/options.php';
 
-		$folders = tfi_get_option( 'tfi_file_folders' );
+		$folders = OptionsManager::get_visible_file_folders();
 		$default_folder_slug = OptionsManager::get_parent_file_folder_slug();
+
+		$this->certify_option( 'tfi_file_folders' );
 		?>
 		<table id="tfi-folders-table" class="tfi-options-table">
 			<thead>
@@ -928,8 +1018,12 @@ class AdminPanelManager {
 	}
 
 	public function display_fields_section() {
+		require_once TFI_PATH . 'includes/options.php';
+
 		$user_types = tfi_get_option( 'tfi_user_types' );
-		$fields = tfi_get_option( 'tfi_fields' );
+		$fields = OptionsManager::get_visible_fields();
+
+		$this->certify_option( 'tfi_fields' );
 		?>
 		<table id="tfi-fields-table" class="tfi-options-table">
 			<thead>
@@ -970,7 +1064,7 @@ class AdminPanelManager {
 	private function display_field_row( $id, $datas ) {
 		$user_types = tfi_get_option( 'tfi_user_types' );
 		$field_types = tfi_get_option( 'tfi_field_types' );
-		$folders = tfi_get_option( 'tfi_file_folders' );
+		$folders = OptionsManager::get_visible_file_folders();
 
 		$default_special_params = array(
 			'height' => 0,
@@ -1056,7 +1150,7 @@ class AdminPanelManager {
 			</div>
 		</td>
 		<?php foreach ( $user_types as $type_id => $display_name ): ?>
-		<td style="text-align: center;"><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'] ) ? 'checked ' : ''; ?>/></td>
+		<td style="text-align: center;"><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[users][<?php echo esc_attr( $type_id ); ?>]" <?php echo in_array( $type_id, $datas['users'], true ) ? 'checked ' : ''; ?>/></td>
 		<?php endforeach; ?>
 		<td class="delete-button-row"><button type="button" onclick="tfi_remove_row('tfi-field-<?php echo esc_attr( $id ); ?>'); tfi_hide_first_row_button()" class="button action"><?php esc_html_e( 'Remove field' ); ?></button></td>
 		<td class="change-field-row"><button type="button" onclick="tfi_move_row_to_up('tfi-field-<?php echo esc_attr( $id ); ?>')" class="button action">&#8597;</button></td>
@@ -1131,6 +1225,8 @@ class AdminPanelManager {
 				$all_users[] = $user;
 			}
 		}
+
+		$this->certify_option( 'tfi_users' );
 		?>
 		<table id="tfi-users-table" class="tfi-options-table">
 			<thead>

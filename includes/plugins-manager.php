@@ -115,14 +115,6 @@ class PluginsManager {
         if ( $option_plugins !== $old_option_plugins ) {
             update_option( 'tfi_plugins', $option_plugins );
         }
-
-        /**
-         * This action is called to allows subplugins to instantiate themselves when they are loaded
-         * Equivalent to 'plugins_loaded' hook for wordpress
-         * 
-         * @since 1.3.0 
-         */
-        do_action( 'tfi_plugins_loaded' );
     }
 }
 
