@@ -195,8 +195,12 @@ class ShortcodesManager {
                 $output .= $this->add_field( $field, $atts );
             }
         }
-        $output .=          '<tr><td><input onclick="this.parentElement.parentElement.setAttribute(\'hidden\', true); document.getElementById(\'false-submit-button\').removeAttribute(\'hidden\');" type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '" /></td></tr>';
-        $output .=          '<tr><td><input disabled hidden type="submit" id="false-submit-button" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '" /></td></tr>';
+        $output .=          '<tr>';
+        $output .=              '<td>';
+        $output .=                  '<input onclick="this.setAttribute(\'hidden\', true); document.getElementById(\'false-submit-button\').removeAttribute(\'hidden\');" type="submit" id="submit" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '" />';
+        $output .=                  '<input hidden disabled type="submit" id="false-submit-button" class="submit-button" value="' . esc_attr__( 'Register modifications' ) . '" />';
+        $output .=              '</td>';
+        $output .=          '</tr>';
         $output .=      '</table>';
         $output .=      '<input type="hidden" name="tfi_fields_version" value="' . esc_attr__( tfi_get_option( 'tfi_fields_version' ) ) . '" />';
         $output .= '</form>';

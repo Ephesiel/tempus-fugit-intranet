@@ -32,7 +32,7 @@ class InstallManager {
      * 
      * Call every methods needed at activation.
      * It adds options, create table and add every roles and capabilities.
-     * Sub plugins are activated at the end, they will be able to use tfi datas and functions.
+     * Sub plugins are activated after options, because they need options updated
      * 
      * @since 1.0.0
      * @access public
@@ -40,9 +40,9 @@ class InstallManager {
      */
     public static function plugin_activation() {
         self::add_roles();
-        self::add_options();
         self::create_table();
         self::activate_plugins();
+        self::add_options();
     }
 
     /**
@@ -166,7 +166,7 @@ class InstallManager {
 				
 				if ( $plugin !== false ) {
 					$plugin->activate( true );
-				}
+                }
             }
         }
     }
