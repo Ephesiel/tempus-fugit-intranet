@@ -48,6 +48,10 @@ Intranet to allow every students to add their own datas at home whitout passing 
 = 1.2.4 =
 * Multiple fields are not send when the value didn't change
 
+= 1.3.0 =
+* Add the possibility of add sub plugins to tfi
+* Add echo subplugin
+
 == How to use ==
 
 = After installation =

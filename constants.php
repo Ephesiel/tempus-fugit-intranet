@@ -27,4 +27,4 @@ if ( $upload_dir['error'] === false ) {
 
 define( 'TFI_PLUGINS_FOLDER_PATH', TFI_PATH . 'plugins/tfi/' );
 
-define( 'TFI_VERSION', '1.2.4' );
+define( 'TFI_VERSION', '1.3.0' );
