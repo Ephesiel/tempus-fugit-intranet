@@ -49,9 +49,8 @@ class FileManager {
      * @since 1.2.2
      * @access public
      * 
-     * @param string    $filename   The filename where we want to remove the file (it should be a filename which exists inside the upload directory)
-     * 
-     * @return bool     Success of the operation
+     * @param string    $filename   The filename where we want to remove the file (it should be a file which exists inside the upload directory)
+     * @return bool                 Success of the operation
      */
     public function remove_file( $filename ) {
         $filename = TFI_UPLOAD_FOLDER_DIR . '/' . $filename;
@@ -61,6 +60,20 @@ class FileManager {
         }
 
         return false;
+    }
+
+    /**
+     * Remove_directory.
+     * 
+     * Remove a directory from the tfi upload dir
+     * 
+     * @since 1.3.0
+     * @access public
+     * 
+     * @param string    $dirname   The dirname where we want to remove the file (it should be a directory which exists inside the upload directory)
+     */
+    public function remove_directory( $dirname ) {
+        tfi_delete_files( TFI_UPLOAD_FOLDER_DIR . '/' . $dirname );
     }
 
     /**
