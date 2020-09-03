@@ -18,7 +18,11 @@ if ( ! file_exists( TFI_TEMP_PATH ) ) {
 define( 'TFI_TEMPLATE_PAGE', 'tfi-user-page.php' );
 define( 'TFI_TABLE', 'tfi_datas' );
 
-$upload_dir = wp_upload_dir();
+/**
+ * Call wp_get_upload_dir instead of wp_upload_dir.
+ * It's because we don't want to create the folder, www user doesn't have the permission to do that on the server and it can return an error.
+ */
+$upload_dir = wp_get_upload_dir();
 
 if ( $upload_dir['error'] === false ) {
 	define( 'TFI_UPLOAD_FOLDER_DIR', $upload_dir['basedir'] . '/tempus_fugit_files' );
